@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import SecretItem from '@/components/SecretItem'
 import SecretForm from '@/components/SecretForm'
 import { useAuth } from '../auth'
@@ -110,15 +117,27 @@ export default function Vault() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {secrets.map((secret) => (
-              <SecretItem
-                key={secret.id}
-                secret={secret}
-                token={token!}
-                onDelete={fetchSecrets}
-              />
-            ))}
+          <div className="border-4 border-black rounded-sm shadow-brutal bg-white overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-bold text-base">Key</TableHead>
+                  <TableHead className="font-bold text-base w-[120px] md:w-auto">Value</TableHead>
+                  <TableHead className="text-right font-bold text-base w-[60px] md:w-auto">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {secrets.map((secret) => (
+                  <SecretItem
+                    key={secret.id}
+                    secret={secret}
+                    token={token!}
+                    onDelete={fetchSecrets}
+                    onUpdate={fetchSecrets}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 

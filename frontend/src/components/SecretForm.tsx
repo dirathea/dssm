@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -17,7 +17,7 @@ import { cryptoService } from '../crypto'
 import { api } from '../api'
 
 interface SecretFormProps {
-  trigger: React.ReactNode
+  trigger?: React.ReactNode | null
   onSuccess: () => void
   token: string
   secret?: {
@@ -26,14 +26,60 @@ interface SecretFormProps {
     encrypted_value: string
     iv: string
   }
+  decryptSecret?: () => Promise<string>
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export default function SecretForm({ trigger, onSuccess, token, secret }: SecretFormProps) {
-  const [open, setOpen] = useState(false)
+export default function SecretForm({ 
+  trigger, 
+  onSuccess, 
+  token, 
+  secret, 
+  decryptSecret,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange 
+}: SecretFormProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [name, setName] = useState(secret?.name || '')
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [decrypting, setDecrypting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = controlledOnOpenChange || setInternalOpen
+
+  // Watch for controlled open state changes and decrypt when opening
+  useEffect(() => {
+    const decryptOnOpen = async () => {
+      if (open && secret && decryptSecret) {
+        setDecrypting(true)
+        setError(null)
+        try {
+          const decryptedValue = await decryptSecret()
+          setValue(decryptedValue)
+        } catch (err: any) {
+          console.error('Failed to decrypt secret for editing:', err)
+          setError('Failed to decrypt secret. Please try again.')
+        } finally {
+          setDecrypting(false)
+        }
+      } else if (!open) {
+        // Reset form when closing
+        setName(secret?.name || '')
+        setValue('')
+        setError(null)
+      }
+    }
+
+    decryptOnOpen()
+  }, [open, secret, decryptSecret])
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,8 +130,8 @@ export default function SecretForm({ trigger, onSuccess, token, secret }: Secret
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -97,46 +143,53 @@ export default function SecretForm({ trigger, onSuccess, token, secret }: Secret
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 my-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., GitHub Token"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={loading}
-              />
+          {decrypting ? (
+            <div className="my-8 text-center">
+              <p className="text-sm text-muted-foreground">Decrypting secret...</p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="value">Secret Value</Label>
-              <Textarea
-                id="value"
-                placeholder="Enter your secret..."
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 border-4 border-black bg-destructive/10 rounded-sm">
-                <p className="text-sm font-semibold text-destructive">{error}</p>
+          ) : (
+            <div className="space-y-4 my-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., GitHub Token"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                />
               </div>
-            )}
-          </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="value">Secret Value</Label>
+                <Textarea
+                  id="value"
+                  placeholder="Enter your secret..."
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  disabled={loading}
+                  rows={4}
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 border-4 border-black bg-destructive/10 rounded-sm">
+                  <p className="text-sm font-semibold text-destructive">{error}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={loading}
+              disabled={loading || decrypting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || decrypting}>
               {loading ? 'Saving...' : secret ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>

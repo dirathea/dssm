@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+.npm
+.yarn/
+.yarn-integrity
+
+# Build outputs
+dist/
+build/
+*.local
+
+# Worker public assets (frontend build output)
+worker/public/*
+!worker/public/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Database files
+*.sqlite
+*.db
+*.sqlite3
+worker/database.sqlite
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Wrangler
+.wrangler/
+worker/.wrangler/
+
+# Testing
+coverage/
+
+# Temporary files
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# OS
+Thumbs.db
+.cache
+.claude/settings.local.json

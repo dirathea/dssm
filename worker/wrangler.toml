@@ -1,0 +1,24 @@
+name = "dssm-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets serving (frontend SPA)
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# D1 Database binding
+# Run `npm run d1:create` to create the database, then add the database_id here
+[[d1_databases]]
+binding = "DB"
+database_name = "dssm-db-dev"
+database_id = "08fd3b48-5b29-4dfe-84dd-fd8f19a5ed53" # Add your database_id after running wrangler d1 create
+migrations_dir = "migrations"
+
+# Environment variables
+[vars]
+JWT_SECRET = "change-this-to-a-secure-random-string-in-production"
+RP_ID = "localhost" # Change to your domain in production
+RP_NAME = "Dead Simple Secret Manager"

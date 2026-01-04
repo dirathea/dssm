@@ -1,0 +1,20 @@
+{
+  "name": "dssm",
+  "version": "1.0.0",
+  "description": "Dead Simple Secret Manager - Passkey-based secret management",
+  "private": true,
+  "scripts": {
+    "dev": "npm run build && concurrently \"npm run dev:watch\" \"npm run dev:worker\"",
+    "dev:watch": "cd frontend && npx vite build --watch --mode development",
+    "dev:worker": "cd worker && npx wrangler dev",
+    "install:all": "npm install && cd worker && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "deploy": "npm run build && cd worker && wrangler deploy"
+  },
+  "keywords": ["secret-manager", "passkeys", "webauthn", "cloudflare", "encryption"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

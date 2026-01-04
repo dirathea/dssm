@@ -1,0 +1,129 @@
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { startAuthentication } from '@simplewebauthn/browser'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { api } from '../api'
+import { useAuth } from '../auth'
+
+export default function Login() {
+  const [userId, setUserId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const { login } = useAuth()
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!userId.trim()) {
+      setError('Please enter your user ID')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      // Step 1: Get authentication options from server
+      const options = await api.loginStart(userId.trim()) as any
+
+      // Step 2: Authenticate using passkey
+      const credential = await startAuthentication(options)
+
+      // Step 3: Send credential to server for verification
+      const result = await api.loginFinish(userId.trim(), credential)
+
+      if (result.success && result.token && result.credentialId) {
+        // Login successful - derive encryption key and redirect
+        await login(userId.trim(), result.token, result.credentialId)
+        navigate('/vault')
+      } else {
+        setError('Login failed. Please try again.')
+      }
+    } catch (err: any) {
+      console.error('Login error:', err)
+
+      let errorMessage = 'Failed to login. Please try again.'
+      if (err.message.includes('404')) {
+        errorMessage = 'User not found. Please register first.'
+      } else if (err.message.includes('Unauthorized') || err.message.includes('Invalid')) {
+        errorMessage = 'Authentication failed. Please try again.'
+      }
+
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-secondary/20 via-primary/20 to-accent/20">
+      <Card className="w-full max-w-md bg-white">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-4xl font-black text-center">
+            Welcome Back!
+          </CardTitle>
+          <CardDescription className="text-center text-base font-semibold">
+            Sign in to access your vault
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="userId" className="text-base">
+                Your User ID
+              </Label>
+              <Input
+                id="userId"
+                type="text"
+                placeholder="e.g., alice"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                disabled={loading}
+                className="text-base"
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div className="p-4 border-4 border-black bg-destructive/10 rounded-sm">
+                <p className="text-sm font-semibold text-destructive">{error}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full text-base"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? 'Authenticating...' : 'Sign in with Passkey'}
+            </Button>
+
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <Link
+                  to="/register"
+                  className="font-bold text-foreground underline hover:text-primary"
+                >
+                  Create one
+                </Link>
+              </p>
+            </div>
+          </form>
+
+          <div className="mt-8 p-4 border-4 border-black bg-primary/10 rounded-sm">
+            <p className="text-xs font-semibold mb-2">Security Note:</p>
+            <p className="text-xs text-muted-foreground">
+              Your secrets are encrypted with a key derived from your passkey. If you lose your passkey, your secrets cannot be recovered.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

@@ -1,0 +1,21 @@
+{
+  "name": "dssm-worker",
+  "version": "1.0.0",
+  "description": "Dead Simple Secret Manager - Cloudflare Worker backend",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "d1:create": "wrangler d1 create dssm-db",
+    "d1:migrate": "wrangler d1 execute dssm-db --file=./schema.sql"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^10.0.1",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240129.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.54.0"
+  }
+}

@@ -94,12 +94,12 @@ export default function SecretItemActions({
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleEdit}>
+          <DropdownMenuContent align="end" className="bg-white border-2 border-black shadow-brutal">
+            <DropdownMenuItem onClick={handleEdit} className="bg-white hover:bg-gray-100 cursor-pointer">
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onReveal} disabled={loading}>
+            <DropdownMenuItem onClick={onReveal} disabled={loading} className="bg-white hover:bg-gray-100 cursor-pointer">
               {revealed ? (
                 <>
                   <EyeOff className="h-4 w-4 mr-2" />
@@ -112,12 +112,12 @@ export default function SecretItemActions({
                 </>
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onCopy}>
+            <DropdownMenuItem onClick={onCopy} className="bg-white hover:bg-gray-100 cursor-pointer">
               <Copy className="h-4 w-4 mr-2" />
               Copy
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive bg-white hover:bg-red-50 cursor-pointer">
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </DropdownMenuItem>

@@ -67,7 +67,7 @@ export default function Vault() {
               Welcome back, {userId}!
             </p>
           </div>
-          <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
+          <Button variant="neutral" size="icon" onClick={handleLogout} title="Logout">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
@@ -120,7 +120,7 @@ export default function Vault() {
           <div className="border-4 border-black rounded-sm shadow-brutal bg-white overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-white hover:bg-white">
                   <TableHead className="font-bold text-base">Key</TableHead>
                   <TableHead className="font-bold text-base w-[120px] md:w-auto">Value</TableHead>
                   <TableHead className="text-right font-bold text-base w-[60px] md:w-auto">Actions</TableHead>

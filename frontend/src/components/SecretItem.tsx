@@ -93,7 +93,7 @@ export default function SecretItem({ secret, token, onDelete, onUpdate }: Secret
   }
 
   return (
-    <TableRow>
+    <TableRow className="bg-white hover:bg-gray-50">
       <SecretKeyCell name={secret.name} createdAt={secret.created_at} />
       
       <SecretValueCell revealed={revealed} decryptedValue={decryptedValue} />

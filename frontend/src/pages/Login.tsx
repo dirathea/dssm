@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { startAuthentication } from '@simplewebauthn/browser'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,12 +48,20 @@ export default function Login() {
       console.error('Login error:', err)
 
       let errorMessage = 'Failed to login. Please try again.'
+      let toastDescription = errorMessage
+      
       if (err.message.includes('404')) {
         errorMessage = 'User not found. Please register first.'
+        toastDescription = 'This user ID does not exist.'
       } else if (err.message.includes('Unauthorized') || err.message.includes('Invalid')) {
         errorMessage = 'Authentication failed. Please try again.'
+        toastDescription = 'Passkey authentication was rejected.'
+      } else if (err.message.includes('credentials')) {
+        errorMessage = 'No credentials found for this user.'
+        toastDescription = 'Please register first or use the correct user ID.'
       }
 
+      toast.error('Login failed', { description: toastDescription })
       setError(errorMessage)
     } finally {
       setLoading(false)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { startRegistration } from '@simplewebauthn/browser'
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,17 +41,24 @@ export default function Register() {
         // Auto-login after registration
         // We need to login to get a JWT token
         const loginOptions = await api.loginStart(userId.trim()) as any
-        const loginCredential = await startRegistration(loginOptions)
+        const loginCredential = await startAuthentication(loginOptions)
         const loginResult = await api.loginFinish(userId.trim(), loginCredential)
 
         await login(userId.trim(), loginResult.token, loginResult.credentialId)
+        toast.success('Account created!', {
+          description: 'Welcome to DSSM. Your secrets are safe with us.',
+        })
         navigate('/vault')
       } else {
-        setError('Registration failed. Please try again.')
+        const errorMsg = 'Registration failed. Please try again.'
+        toast.error('Registration failed', { description: errorMsg })
+        setError(errorMsg)
       }
     } catch (err: any) {
       console.error('Registration error:', err)
-      setError(err.message || 'Failed to register. Please try again.')
+      const errorMsg = err.message || 'Failed to register. Please try again.'
+      toast.error('Registration failed', { description: errorMsg })
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }

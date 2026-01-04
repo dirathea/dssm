@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Eye, EyeOff, Copy, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import {
@@ -48,7 +49,9 @@ export default function SecretItem({ secret, token, onDelete }: SecretItemProps)
       setRevealed(true)
     } catch (error) {
       console.error('Failed to decrypt secret:', error)
-      alert('Failed to decrypt secret. Please refresh and try again.')
+      toast.error('Decryption failed', {
+        description: 'Failed to decrypt secret. Please refresh and log in again.',
+      })
     } finally {
       setLoading(false)
     }
@@ -59,20 +62,31 @@ export default function SecretItem({ secret, token, onDelete }: SecretItemProps)
 
     try {
       await navigator.clipboard.writeText(decryptedValue)
+      toast.success('Copied to clipboard', {
+        description: 'Secret value copied.',
+      })
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
+      toast.error('Copy failed', {
+        description: 'Failed to copy to clipboard.',
+      })
     }
   }
 
   const handleDelete = async () => {
     try {
       await api.deleteSecret(token, secret.id)
+      toast.success('Secret deleted', {
+        description: `"${secret.name}" has been removed.`,
+      })
       onDelete()
     } catch (error) {
       console.error('Failed to delete secret:', error)
-      alert('Failed to delete secret. Please try again.')
+      toast.error('Delete failed', {
+        description: 'Failed to delete secret. Please try again.',
+      })
     }
   }
 

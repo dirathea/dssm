@@ -129,7 +129,8 @@ export default function Vault() {
             <li>All secrets are encrypted client-side before being sent to the server</li>
             <li>The server cannot decrypt your secrets</li>
             <li>If you lose your passkey, your secrets cannot be recovered</li>
-            <li>Your encryption key is stored only in memory and cleared on logout</li>
+            <li>Your encryption key is stored in memory and cleared when you close the tab</li>
+            <li>Sessions expire after 48 hours for security</li>
           </ul>
         </div>
       </div>

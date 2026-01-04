@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -56,9 +57,15 @@ export default function SecretForm({ trigger, onSuccess, token, secret }: Secret
           encryptedValue,
           iv,
         })
+        toast.success('Secret updated', {
+          description: `"${name.trim()}" has been updated.`,
+        })
       } else {
         // Create new secret
         await api.createSecret(token, name.trim(), encryptedValue, iv)
+        toast.success('Secret created', {
+          description: `"${name.trim()}" has been added to your vault.`,
+        })
       }
 
       // Reset form and close dialog
@@ -68,7 +75,9 @@ export default function SecretForm({ trigger, onSuccess, token, secret }: Secret
       onSuccess()
     } catch (err: any) {
       console.error('Failed to save secret:', err)
-      setError(err.message || 'Failed to save secret')
+      const errorMsg = err.message || 'Failed to save secret'
+      toast.error('Operation failed', { description: errorMsg })
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }

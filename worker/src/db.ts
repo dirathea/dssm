@@ -1,29 +1,11 @@
-import { D1Database } from '@cloudflare/workers-types'
+import { eq, and, desc } from 'drizzle-orm'
+import type { DrizzleDB } from './db-client'
+import * as schema from './schema'
 
-// Helper functions for base64 encoding/decoding without Buffer
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64)
-  const bytes = new Uint8Array(binaryString.length)
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-  return bytes.buffer
-}
+// Re-export types for backward compatibility
+export type { User, Credential, Secret, RecoveryCode } from './schema'
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary)
-}
-
-export interface User {
-  id: string
-  created_at: number
-}
-
+// Legacy interface for compatibility with existing code
 export interface Credential {
   id: string
   user_id: string
@@ -33,72 +15,58 @@ export interface Credential {
   created_at: number
 }
 
-export interface Secret {
-  id: number
-  user_id: string
-  name: string
-  encrypted_value: string
-  iv: string
-  created_at: number
-  updated_at: number
-}
-
-export interface RecoveryCode {
-  id: number
-  user_id: string
-  code_hash: string
-  used: boolean
-  used_at: number | null
-  created_at: number
-}
-
 export class Database {
-  constructor(private db: D1Database) {}
+  constructor(private db: DrizzleDB) {}
 
   // User operations
-  async getUser(userId: string): Promise<User | null> {
-    const result = await this.db
-      .prepare('SELECT * FROM users WHERE id = ?')
-      .bind(userId)
-      .first<User>()
-    return result
+  async getUser(userId: string) {
+    return await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    })
   }
 
-  async createUser(userId: string): Promise<User> {
-    const createdAt = Date.now()
-    await this.db
-      .prepare('INSERT INTO users (id, created_at) VALUES (?, ?)')
-      .bind(userId, createdAt)
-      .run()
-    return { id: userId, created_at: createdAt }
+  async createUser(userId: string) {
+    const [user] = await this.db
+      .insert(schema.users)
+      .values({
+        id: userId,
+        createdAt: new Date(),
+      })
+      .returning()
+    return user
   }
 
   // Credential operations
   async getCredential(credentialId: string): Promise<Credential | null> {
-    const result = await this.db
-      .prepare('SELECT * FROM credentials WHERE id = ?')
-      .bind(credentialId)
-      .first<any>()
+    const result = await this.db.query.credentials.findFirst({
+      where: eq(schema.credentials.id, credentialId),
+    })
 
     if (!result) return null
 
+    // Convert base64 to ArrayBuffer for compatibility
     return {
-      ...result,
-      public_key: base64ToArrayBuffer(result.public_key),
+      id: result.id,
+      user_id: result.userId,
+      public_key: base64ToArrayBuffer(result.publicKey),
+      counter: result.counter,
+      transports: result.transports,
+      created_at: result.createdAt.getTime(),
     }
   }
 
   async getCredentialsByUser(userId: string): Promise<Credential[]> {
-    const results = await this.db
-      .prepare('SELECT * FROM credentials WHERE user_id = ?')
-      .bind(userId)
-      .all<any>()
+    const results = await this.db.query.credentials.findMany({
+      where: eq(schema.credentials.userId, userId),
+    })
 
-    if (!results.results) return []
-
-    return results.results.map((row) => ({
-      ...row,
-      public_key: base64ToArrayBuffer(row.public_key),
+    return results.map((row) => ({
+      id: row.id,
+      user_id: row.userId,
+      public_key: base64ToArrayBuffer(row.publicKey),
+      counter: row.counter,
+      transports: row.transports,
+      created_at: row.createdAt.getTime(),
     }))
   }
 
@@ -107,52 +75,57 @@ export class Database {
     userId: string,
     publicKey: ArrayBuffer,
     counter: number,
-    transports: string[] | undefined
+    transports?: string[]
   ): Promise<Credential> {
-    const createdAt = Date.now()
-    const transportStr = transports ? JSON.stringify(transports) : null
+    // Convert ArrayBuffer to base64
     const publicKeyBase64 = arrayBufferToBase64(publicKey)
+    const transportStr = transports ? JSON.stringify(transports) : null
 
-    await this.db
-      .prepare(
-        'INSERT INTO credentials (id, user_id, public_key, counter, transports, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-      )
-      .bind(credentialId, userId, publicKeyBase64, counter, transportStr, createdAt)
-      .run()
+    const [credential] = await this.db
+      .insert(schema.credentials)
+      .values({
+        id: credentialId,
+        userId,
+        publicKey: publicKeyBase64,
+        counter,
+        transports: transportStr,
+        createdAt: new Date(),
+      })
+      .returning()
 
+    // Convert back to ArrayBuffer for return type compatibility
     return {
-      id: credentialId,
-      user_id: userId,
+      id: credential.id,
+      user_id: credential.userId,
       public_key: publicKey,
-      counter,
+      counter: credential.counter,
       transports: transportStr,
-      created_at: createdAt,
+      created_at: credential.createdAt.getTime(),
     }
   }
 
   async updateCredentialCounter(credentialId: string, counter: number): Promise<void> {
     await this.db
-      .prepare('UPDATE credentials SET counter = ? WHERE id = ?')
-      .bind(counter, credentialId)
-      .run()
+      .update(schema.credentials)
+      .set({ counter })
+      .where(eq(schema.credentials.id, credentialId))
   }
 
   // Secret operations
-  async getSecretsByUser(userId: string): Promise<Secret[]> {
-    const results = await this.db
-      .prepare('SELECT * FROM secrets WHERE user_id = ? ORDER BY created_at DESC')
-      .bind(userId)
-      .all<Secret>()
-
-    return results.results || []
+  async getSecretsByUser(userId: string) {
+    return await this.db.query.secrets.findMany({
+      where: eq(schema.secrets.userId, userId),
+      orderBy: desc(schema.secrets.createdAt),
+    })
   }
 
-  async getSecret(secretId: number, userId: string): Promise<Secret | null> {
-    const result = await this.db
-      .prepare('SELECT * FROM secrets WHERE id = ? AND user_id = ?')
-      .bind(secretId, userId)
-      .first<Secret>()
-    return result
+  async getSecret(secretId: number, userId: string) {
+    return await this.db.query.secrets.findFirst({
+      where: and(
+        eq(schema.secrets.id, secretId),
+        eq(schema.secrets.userId, userId)
+      ),
+    })
   }
 
   async createSecret(
@@ -160,19 +133,20 @@ export class Database {
     name: string,
     encryptedValue: string,
     iv: string
-  ): Promise<Secret> {
-    const now = Date.now()
-    const result = await this.db
-      .prepare(
-        'INSERT INTO secrets (user_id, name, encrypted_value, iv, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *'
-      )
-      .bind(userId, name, encryptedValue, iv, now, now)
-      .first<Secret>()
-
-    if (!result) {
-      throw new Error('Failed to create secret')
-    }
-    return result
+  ) {
+    const now = new Date()
+    const [secret] = await this.db
+      .insert(schema.secrets)
+      .values({
+        userId,
+        name,
+        encryptedValue,
+        iv,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+    return secret
   }
 
   async updateSecret(
@@ -181,79 +155,101 @@ export class Database {
     name?: string,
     encryptedValue?: string,
     iv?: string
-  ): Promise<Secret | null> {
+  ) {
     const secret = await this.getSecret(secretId, userId)
     if (!secret) return null
 
-    const updatedName = name ?? secret.name
-    const updatedValue = encryptedValue ?? secret.encrypted_value
-    const updatedIv = iv ?? secret.iv
-    const now = Date.now()
+    const [updated] = await this.db
+      .update(schema.secrets)
+      .set({
+        name: name ?? secret.name,
+        encryptedValue: encryptedValue ?? secret.encryptedValue,
+        iv: iv ?? secret.iv,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(schema.secrets.id, secretId),
+        eq(schema.secrets.userId, userId)
+      ))
+      .returning()
 
-    await this.db
-      .prepare(
-        'UPDATE secrets SET name = ?, encrypted_value = ?, iv = ?, updated_at = ? WHERE id = ? AND user_id = ?'
-      )
-      .bind(updatedName, updatedValue, updatedIv, now, secretId, userId)
-      .run()
-
-    return this.getSecret(secretId, userId)
+    return updated
   }
 
   async deleteSecret(secretId: number, userId: string): Promise<boolean> {
     const result = await this.db
-      .prepare('DELETE FROM secrets WHERE id = ? AND user_id = ?')
-      .bind(secretId, userId)
-      .run()
+      .delete(schema.secrets)
+      .where(and(
+        eq(schema.secrets.id, secretId),
+        eq(schema.secrets.userId, userId)
+      ))
+      .returning()
 
-    return result.success
+    return result.length > 0
   }
 
   // Recovery code operations
   async createRecoveryCodes(userId: string, codeHashes: string[]): Promise<void> {
-    const createdAt = Date.now()
-    
-    // Insert all codes in a single batch
-    for (const hash of codeHashes) {
-      await this.db
-        .prepare(
-          'INSERT INTO recovery_codes (user_id, code_hash, used, created_at) VALUES (?, ?, 0, ?)'
-        )
-        .bind(userId, hash, createdAt)
-        .run()
-    }
+    const now = new Date()
+    await this.db.insert(schema.recoveryCodes).values(
+      codeHashes.map((hash) => ({
+        userId,
+        codeHash: hash,
+        used: false,
+        createdAt: now,
+      }))
+    )
   }
 
-  async getRecoveryCodesByUser(userId: string): Promise<RecoveryCode[]> {
-    const results = await this.db
-      .prepare('SELECT * FROM recovery_codes WHERE user_id = ? ORDER BY created_at DESC')
-      .bind(userId)
-      .all<RecoveryCode>()
-
-    return results.results || []
+  async getRecoveryCodesByUser(userId: string) {
+    return await this.db.query.recoveryCodes.findMany({
+      where: eq(schema.recoveryCodes.userId, userId),
+      orderBy: desc(schema.recoveryCodes.createdAt),
+    })
   }
 
-  async getUnusedRecoveryCodeByHash(userId: string, codeHash: string): Promise<RecoveryCode | null> {
-    const result = await this.db
-      .prepare('SELECT * FROM recovery_codes WHERE user_id = ? AND code_hash = ? AND used = 0')
-      .bind(userId, codeHash)
-      .first<RecoveryCode>()
-
-    return result
+  async getUnusedRecoveryCodeByHash(userId: string, codeHash: string) {
+    return await this.db.query.recoveryCodes.findFirst({
+      where: and(
+        eq(schema.recoveryCodes.userId, userId),
+        eq(schema.recoveryCodes.codeHash, codeHash),
+        eq(schema.recoveryCodes.used, false)
+      ),
+    })
   }
 
   async markRecoveryCodeAsUsed(codeId: number): Promise<void> {
-    const usedAt = Date.now()
     await this.db
-      .prepare('UPDATE recovery_codes SET used = 1, used_at = ? WHERE id = ?')
-      .bind(usedAt, codeId)
-      .run()
+      .update(schema.recoveryCodes)
+      .set({ 
+        used: true, 
+        usedAt: new Date() 
+      })
+      .where(eq(schema.recoveryCodes.id, codeId))
   }
 
   async deleteAllRecoveryCodes(userId: string): Promise<void> {
     await this.db
-      .prepare('DELETE FROM recovery_codes WHERE user_id = ?')
-      .bind(userId)
-      .run()
+      .delete(schema.recoveryCodes)
+      .where(eq(schema.recoveryCodes.userId, userId))
   }
+}
+
+// Helper functions for ArrayBuffer <-> Base64 conversion
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes.buffer
 }

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { createDrizzleClient } from './db-client'
 import { Database } from './db'
 import { WebAuthnService } from './auth'
 import { verifyJWT } from './crypto'
@@ -7,7 +8,7 @@ import * as authHandlers from './handlers/auth'
 import * as secretsHandlers from './handlers/secrets'
 
 export interface Env {
-  DB: D1Database
+  DB?: D1Database // Optional - only needed in Cloudflare mode
   JWT_SECRET: string
   RP_ID: string
   RP_NAME: string
@@ -41,7 +42,9 @@ app.use('/api/*', async (c, next) => {
 
 // Initialize services middleware (only for API routes)
 app.use('/api/*', async (c, next) => {
-  const db = new Database(c.env.DB)
+  // Create Drizzle client (auto-detects runtime: Cloudflare Workers or Node.js)
+  const drizzleDb = createDrizzleClient(c.env)
+  const db = new Database(drizzleDb)
   c.set('db', db)
 
   const webauthnConfig = {
@@ -103,6 +106,15 @@ app.get('/api/secrets', requireAuth, secretsHandlers.listSecrets)
 app.post('/api/secrets', requireAuth, secretsHandlers.createSecret)
 app.put('/api/secrets/:id', requireAuth, secretsHandlers.updateSecret)
 app.delete('/api/secrets/:id', requireAuth, secretsHandlers.deleteSecret)
+
+// Health check endpoint
+app.get('/api/health', (c) => {
+  return c.json({
+    status: 'healthy',
+    runtime: typeof caches !== 'undefined' ? 'cloudflare' : 'node',
+    timestamp: Date.now(),
+  })
+})
 
 // Error handler
 app.onError((err, c) => {

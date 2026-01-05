@@ -6,9 +6,11 @@ This guide provides essential information for AI agents working on the DSSM (Dea
 
 DSSM is a minimalist secret manager with passkey authentication, built with:
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
-- **Backend**: Cloudflare Workers + Hono framework + D1 (SQLite)
+- **Backend**: Cloudflare Workers or Node.js + Hono framework
+- **Database**: D1 (Cloudflare) or SQLite (Docker) via Drizzle ORM
 - **Auth**: WebAuthn/Passkeys (@simplewebauthn)
 - **Encryption**: Client-side AES-256-GCM
+- **Deployment**: Cloudflare Workers or Docker (self-hosted)
 
 The app uses a **neobrutalist design** with thick borders, brutal shadows, and bold colors.
 
@@ -61,10 +63,37 @@ npm run lint           # Run ESLint (TypeScript strict mode)
 
 ### Worker Commands (from `/worker`)
 ```bash
+# Cloudflare Workers mode
 npm run dev            # Start Wrangler dev server (http://localhost:8787)
 npm run deploy         # Deploy to Cloudflare Workers
 npm run d1:create      # Create D1 database
 npm run d1:migrate     # Run database migrations
+
+# Node.js/Docker mode
+npm run dev:node       # Start Node.js server (http://localhost:3000)
+npm run build:node     # Build TypeScript for Node.js
+npm run start:node     # Start built Node.js server
+
+# Drizzle ORM (Database)
+npm run db:generate    # Generate migration from schema changes
+npm run db:migrate     # Run migrations (Node.js mode)
+npm run db:studio      # Visual database browser (dev tool)
+npm run db:push        # Push schema directly (dev only)
+```
+
+### Docker Commands (from `/`)
+```bash
+# Quick start
+docker-compose up -d              # Start in background
+docker-compose logs -f            # View logs
+docker-compose down               # Stop and remove containers
+
+# Build from source
+docker build -t dssm:local .      # Build image
+docker run -p 3000:3000 dssm:local  # Run container
+
+# Development
+docker-compose -f docker-compose.dev.yml up  # Dev mode with hot reload
 ```
 
 ### No Test Framework
@@ -198,6 +227,96 @@ Instead, override styles using `className` props where components are used:
 - **No subtle gradients**: Solid colors only
 - **Sharp corners**: Use `rounded-base` (5px) or `rounded-md`
 
+## Database Layer (Drizzle ORM)
+
+DSSM uses **Drizzle ORM** for database abstraction, supporting both:
+- **Cloudflare D1** (production on Workers)
+- **SQLite** (Docker/Node.js via better-sqlite3)
+
+### Schema Definition
+All tables defined in `worker/src/schema.ts` using Drizzle schema builder:
+
+```typescript
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+})
+
+// Auto-generated TypeScript types
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+```
+
+### Runtime Detection
+The database client automatically detects the runtime environment:
+
+```typescript
+// worker/src/db-client.ts
+export function createDrizzleClient(env: any) {
+  if (isCloudflare()) {
+    return drizzleD1(env.DB, { schema })  // D1 for Cloudflare
+  } else {
+    return drizzleSqlite(sqlite, { schema })  // SQLite for Node.js
+  }
+}
+```
+
+### Database Queries
+Use Drizzle relational queries (type-safe):
+
+```typescript
+import { eq, and, desc } from 'drizzle-orm'
+import * as schema from './schema'
+
+// Good - Drizzle relational queries
+await db.query.users.findFirst({
+  where: eq(schema.users.id, userId)
+})
+
+await db.query.secrets.findMany({
+  where: eq(schema.secrets.userId, userId),
+  orderBy: desc(schema.secrets.createdAt),
+})
+
+// Good - Drizzle query builder
+await db.insert(schema.secrets).values({
+  userId,
+  name,
+  encryptedValue,
+  iv,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}).returning()
+
+// Bad - raw SQL (avoid unless necessary)
+await db.execute(sql`SELECT * FROM users WHERE id = ${userId}`)
+```
+
+### Migrations
+- **Generation**: `npm run db:generate` (creates SQL from schema changes)
+- **Apply**: `npm run db:migrate` (runs migrations in Node.js)
+- **Dev tool**: `npm run db:studio` (visual database browser)
+- **Dev push**: `npm run db:push` (push schema directly, dev only)
+
+**Important**: For Cloudflare D1, use `wrangler d1 execute` for migrations.
+
+### Database Class Usage
+The `Database` class wraps Drizzle queries with backward-compatible interface:
+
+```typescript
+import { createDrizzleClient } from './db-client'
+import { Database } from './db'
+
+const drizzleDb = createDrizzleClient(c.env)
+const db = new Database(drizzleDb)
+
+// Use methods as before
+const user = await db.getUser(userId)
+const secrets = await db.getSecretsByUser(userId)
+```
+
 ## Common Patterns
 
 ### API Client Usage
@@ -212,18 +331,36 @@ const secrets = await api.getSecrets(token)
 await api.createSecret(token, name, encryptedValue, iv)
 ```
 
-### Database Queries
-```typescript
-const db = new Database(c.env.DB)
-const user = await db.getUser(userId)
-const secrets = await db.getSecretsByUser(userId)
-```
-
 ### Authentication Middleware
 Protected routes use `requireAuth` middleware in `/worker/src/index.ts`:
 ```typescript
 app.get('/api/secrets', requireAuth, secretsHandlers.listSecrets)
 ```
+
+## Docker Development
+
+### Local Development with Docker
+```bash
+# Run Node.js server locally (hot reload)
+cd worker && npm run dev:node
+
+# Or use Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f dssm
+```
+
+### Testing Both Runtimes
+- **Cloudflare**: `npm run dev` (from root)
+- **Node.js**: `npm run dev:node` (from worker/)
+- Both should produce identical API responses
+
+### Important: Runtime Compatibility
+- All queries must work in **both** D1 and SQLite
+- Avoid SQLite-specific extensions (e.g., FTS5, JSON1)
+- Test changes in both runtimes before committing
+- Use Drizzle relational queries for maximum compatibility
 
 ## Important Rules
 

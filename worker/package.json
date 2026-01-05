@@ -5,17 +5,32 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
+    "dev:node": "tsx watch src/node-server.ts",
+    "build:node": "tsc -p tsconfig.node.json",
+    "start:node": "node dist/node-server.js",
     "deploy": "wrangler deploy",
     "d1:create": "wrangler d1 create dssm-db",
-    "d1:migrate": "wrangler d1 execute dssm-db --file=./schema.sql"
+    "d1:migrate": "wrangler d1 execute dssm-db --file=./schema.sql",
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push:sqlite"
   },
   "dependencies": {
     "@simplewebauthn/server": "^10.0.1",
-    "hono": "^4.0.0"
+    "hono": "^4.0.0",
+    "drizzle-orm": "^0.30.0",
+    "@hono/node-server": "^1.5.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240129.0",
     "typescript": "^5.6.3",
-    "wrangler": "^4.54.0"
+    "wrangler": "^4.54.0",
+    "drizzle-kit": "^0.20.0",
+    "tsx": "^4.7.0",
+    "@types/better-sqlite3": "^7.6.8"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^9.3.0"
   }
 }

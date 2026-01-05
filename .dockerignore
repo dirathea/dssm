@@ -1,0 +1,45 @@
+# Node modules (will be installed fresh)
+node_modules/
+*/node_modules/
+npm-debug.log
+
+# Build outputs
+dist/
+*/dist/
+build/
+*/build/
+
+# Development files
+.git/
+.github/
+.vscode/
+.claude/
+*.log
+.DS_Store
+
+# Environment files (use docker env vars instead)
+.env
+.env.*
+!.env.example
+
+# Cloudflare specific
+worker/wrangler.toml
+worker/.wrangler/
+worker/d1/
+
+# Documentation
+*.md
+!README.md
+
+# Frontend dev
+frontend/.vite/
+frontend/node_modules/
+
+# Drizzle local data
+worker/data/
+
+# Test files
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js

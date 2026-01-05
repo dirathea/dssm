@@ -7,27 +7,56 @@ A minimalist, secure secret manager with passkey authentication. No passwords, j
 - **Passkey Authentication**: WebAuthn-based login using biometrics or device PIN
 - **Client-Side Encryption**: Secrets are encrypted in your browser before being sent to the server
 - **Zero-Knowledge Architecture**: The server cannot decrypt your secrets
+- **Self-Hosted or Cloud**: Run with Docker or deploy to Cloudflare Workers
 - **Neobrutalism Design**: Bold, fun, and approachable UI
 - **Edge Deployed**: Runs on Cloudflare's global network for low latency
 - **Free Tier**: Deploy and run for free on Cloudflare
 
 ## Tech Stack
 
-- **Backend**: Cloudflare Workers (Hono framework)
+- **Backend**: Cloudflare Workers or Node.js (Hono framework)
 - **Frontend**: React + Vite + shadcn/ui
-- **Database**: Cloudflare D1 (SQLite-compatible)
+- **Database**: Cloudflare D1 or SQLite (via Drizzle ORM)
 - **Authentication**: WebAuthn / Passkeys
 - **Encryption**: AES-256-GCM (client-side)
 
-## Quick Start
+## Deployment Options
 
-### Prerequisites
+Choose your deployment method:
+
+### 🐳 Option 1: Self-Hosted with Docker (Recommended for Control)
+
+**Best for**: On-premise deployment, full control, air-gapped networks
+
+```bash
+# Quick start
+git clone https://github.com/yourusername/dssm.git
+cd dssm
+docker-compose up -d
+
+# Visit http://localhost:3000
+```
+
+**Features**:
+- ✅ One-command setup
+- ✅ SQLite database (file-based, easy backups)
+- ✅ No external dependencies
+- ✅ Works offline
+- ✅ Full control over data
+
+See [DOCKER.md](./DOCKER.md) for complete self-hosting guide.
+
+### ☁️ Option 2: Cloudflare Workers (Recommended for Free Hosting)
+
+**Best for**: Global edge deployment, zero maintenance, free tier
+
+#### Prerequisites
 
 - Node.js 18+ installed
 - Cloudflare account (free tier works)
 - Wrangler CLI: `npm install -g wrangler`
 
-### Installation
+#### Installation
 
 ```bash
 # Install all dependencies
@@ -43,7 +72,7 @@ npm run d1:create
 npm run d1:migrate
 ```
 
-### Development
+#### Development
 
 ```bash
 # Run both frontend and backend
@@ -54,7 +83,7 @@ npm run dev:worker    # Worker runs on http://localhost:8787
 npm run dev:frontend  # Frontend runs on http://localhost:5173
 ```
 
-### Deployment
+#### Deployment to Cloudflare
 
 ```bash
 # Single command to build frontend and deploy everything
@@ -67,6 +96,20 @@ npm run deploy
 ```
 
 The entire application (frontend + backend + D1) is deployed as a single Worker with Assets serving. Both UI and API are available at the same URL!
+
+### Comparison
+
+| Feature | Docker Self-Hosted | Cloudflare Workers |
+|---------|-------------------|-------------------|
+| **Hosting** | Your server | Cloudflare edge |
+| **Cost** | Server costs | Free tier available |
+| **Setup Time** | 5 minutes | 10 minutes |
+| **Database** | SQLite (file) | D1 (managed SQLite) |
+| **Scalability** | Manual | Automatic (global) |
+| **Control** | Full | Limited |
+| **Backups** | File copy | D1 export |
+| **SSL** | Self-managed | Automatic |
+| **Offline** | ✅ Yes | ❌ No |
 
 ## Project Structure
 

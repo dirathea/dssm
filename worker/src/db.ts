@@ -43,6 +43,15 @@ export interface Secret {
   updated_at: number
 }
 
+export interface RecoveryCode {
+  id: number
+  user_id: string
+  code_hash: string
+  used: boolean
+  used_at: number | null
+  created_at: number
+}
+
 export class Database {
   constructor(private db: D1Database) {}
 
@@ -198,5 +207,53 @@ export class Database {
       .run()
 
     return result.success
+  }
+
+  // Recovery code operations
+  async createRecoveryCodes(userId: string, codeHashes: string[]): Promise<void> {
+    const createdAt = Date.now()
+    
+    // Insert all codes in a single batch
+    for (const hash of codeHashes) {
+      await this.db
+        .prepare(
+          'INSERT INTO recovery_codes (user_id, code_hash, used, created_at) VALUES (?, ?, 0, ?)'
+        )
+        .bind(userId, hash, createdAt)
+        .run()
+    }
+  }
+
+  async getRecoveryCodesByUser(userId: string): Promise<RecoveryCode[]> {
+    const results = await this.db
+      .prepare('SELECT * FROM recovery_codes WHERE user_id = ? ORDER BY created_at DESC')
+      .bind(userId)
+      .all<RecoveryCode>()
+
+    return results.results || []
+  }
+
+  async getUnusedRecoveryCodeByHash(userId: string, codeHash: string): Promise<RecoveryCode | null> {
+    const result = await this.db
+      .prepare('SELECT * FROM recovery_codes WHERE user_id = ? AND code_hash = ? AND used = 0')
+      .bind(userId, codeHash)
+      .first<RecoveryCode>()
+
+    return result
+  }
+
+  async markRecoveryCodeAsUsed(codeId: number): Promise<void> {
+    const usedAt = Date.now()
+    await this.db
+      .prepare('UPDATE recovery_codes SET used = 1, used_at = ? WHERE id = ?')
+      .bind(usedAt, codeId)
+      .run()
+  }
+
+  async deleteAllRecoveryCodes(userId: string): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM recovery_codes WHERE user_id = ?')
+      .bind(userId)
+      .run()
   }
 }

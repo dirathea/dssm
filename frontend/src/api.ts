@@ -71,6 +71,26 @@ class ApiClient {
     )
   }
 
+  async recoverStart(userId: string, recoveryCode: string) {
+    return this.request('/api/auth/recover-start', {
+      method: 'POST',
+      body: JSON.stringify({ userId, recoveryCode }),
+    })
+  }
+
+  async recoverFinish(userId: string, credential: any, recoveryCodeId: number) {
+    return this.request<{
+      success: boolean
+      token: string
+      userId: string
+      credentialId: string
+      recoveryCodes: string[]
+    }>('/api/auth/recover-finish', {
+      method: 'POST',
+      body: JSON.stringify({ userId, credential, recoveryCodeId }),
+    })
+  }
+
   // Secret endpoints (require authentication)
   async getSecrets(token: string) {
     return this.request('/api/secrets', {

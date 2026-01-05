@@ -58,12 +58,12 @@ export default function SecretItemActions({
     <>
       {/* Desktop: Show all action buttons (md and above) */}
       <div className="hidden md:flex justify-end gap-2">
-        <Button variant="ghost" size="icon" title="Edit" onClick={handleEdit}>
+        <Button variant="neutral" size="icon" title="Edit" onClick={handleEdit}>
           <Pencil className="h-5 w-5" />
         </Button>
 
         <Button
-          variant="ghost"
+          variant="neutral"
           size="icon"
           onClick={onReveal}
           disabled={loading}
@@ -73,7 +73,7 @@ export default function SecretItemActions({
         </Button>
 
         <Button
-          variant="ghost"
+          variant="neutral"
           size="icon"
           onClick={onCopy}
           title="Copy to clipboard"
@@ -81,7 +81,7 @@ export default function SecretItemActions({
           <Copy className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="icon" title="Delete" onClick={handleDelete}>
+        <Button variant="neutral" size="icon" title="Delete" onClick={handleDelete}>
           <Trash2 className="h-5 w-5 text-destructive" />
         </Button>
       </div>
@@ -90,7 +90,7 @@ export default function SecretItemActions({
       <div className="md:hidden flex justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" title="Actions">
+            <Button variant="neutral" size="icon" title="Actions">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
@@ -146,10 +146,10 @@ export default function SecretItemActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="neutral">Cancel</Button>
             </AlertDialogCancel>
             <AlertDialogAction>
-              <Button variant="destructive" onClick={onDelete}>
+              <Button variant="neutral" onClick={onDelete}>
                 Delete
               </Button>
             </AlertDialogAction>

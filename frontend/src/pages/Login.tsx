@@ -112,7 +112,16 @@ export default function Login() {
               {loading ? 'Authenticating...' : 'Sign in with Passkey'}
             </Button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Lost your passkey?{' '}
+                <Link
+                  to="/recovery"
+                  className="font-bold text-destructive underline hover:text-destructive/80"
+                >
+                  Use recovery code
+                </Link>
+              </p>
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
                 <Link
@@ -128,7 +137,7 @@ export default function Login() {
           <div className="mt-8 p-4 border-4 border-black bg-primary/10 rounded-sm">
             <p className="text-xs font-semibold mb-2">Security Note:</p>
             <p className="text-xs text-muted-foreground">
-              Your secrets are encrypted with a key derived from your passkey. If you lose your passkey, your secrets cannot be recovered.
+              Your secrets are encrypted with a key derived from your passkey. If you lose your passkey, use one of your recovery codes to regain access.
             </p>
           </div>
         </CardContent>

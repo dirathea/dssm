@@ -95,6 +95,8 @@ app.post('/api/auth/register-start', authHandlers.registerStart)
 app.post('/api/auth/register-finish', authHandlers.registerFinish)
 app.post('/api/auth/login-start', authHandlers.loginStart)
 app.post('/api/auth/login-finish', authHandlers.loginFinish)
+app.post('/api/auth/recover-start', authHandlers.recoverStart)
+app.post('/api/auth/recover-finish', authHandlers.recoverFinish)
 
 // Secret routes (protected)
 app.get('/api/secrets', requireAuth, secretsHandlers.listSecrets)

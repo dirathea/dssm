@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import RecoveryCodesDialog from '@/components/RecoveryCodesDialog'
 import { api } from '../api'
 import { useAuth } from '../auth'
 
@@ -13,6 +14,12 @@ export default function Register() {
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
+  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false)
+  const [loginData, setLoginData] = useState<{
+    token: string
+    credentialId: string
+  } | null>(null)
   const navigate = useNavigate()
   const { login } = useAuth()
 
@@ -37,18 +44,27 @@ export default function Register() {
       // Step 3: Send credential to server for verification
       const result = await api.registerFinish(userId.trim(), credential) as any
 
-      if (result.success && result.credentialId) {
-        // Auto-login after registration
-        // We need to login to get a JWT token
+      if (result.success && result.credentialId && result.recoveryCodes) {
+        // Store recovery codes
+        setRecoveryCodes(result.recoveryCodes)
+        
+        // Auto-login after registration to get JWT token
         const loginOptions = await api.loginStart(userId.trim()) as any
         const loginCredential = await startAuthentication(loginOptions)
         const loginResult = await api.loginFinish(userId.trim(), loginCredential)
 
-        await login(userId.trim(), loginResult.token, loginResult.credentialId)
-        toast.success('Account created!', {
-          description: 'Welcome to DSSM. Your secrets are safe with us.',
+        // Store login data for later
+        setLoginData({
+          token: loginResult.token,
+          credentialId: loginResult.credentialId,
         })
-        navigate('/vault')
+
+        // Show recovery codes dialog
+        setShowRecoveryCodes(true)
+        
+        toast.success('Account created!', {
+          description: 'Please save your recovery codes.',
+        })
       } else {
         const errorMsg = 'Registration failed. Please try again.'
         toast.error('Registration failed', { description: errorMsg })
@@ -64,8 +80,23 @@ export default function Register() {
     }
   }
 
+  const handleRecoveryCodesConfirm = async () => {
+    if (!loginData) return
+
+    try {
+      // Complete login
+      await login(userId.trim(), loginData.token, loginData.credentialId)
+      setShowRecoveryCodes(false)
+      navigate('/vault')
+    } catch (err) {
+      console.error('Login after registration error:', err)
+      toast.error('Failed to complete registration')
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20">
+    <>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20">
       <Card className="w-full max-w-md bg-white">
         <CardHeader className="space-y-2">
           <CardTitle className="text-4xl font-black text-center">
@@ -142,5 +173,16 @@ export default function Register() {
         </CardContent>
       </Card>
     </div>
+
+    {showRecoveryCodes && (
+      <RecoveryCodesDialog
+        open={showRecoveryCodes}
+        onOpenChange={setShowRecoveryCodes}
+        recoveryCodes={recoveryCodes}
+        onConfirm={handleRecoveryCodesConfirm}
+        userId={userId}
+      />
+    )}
+  </>
   )
 }

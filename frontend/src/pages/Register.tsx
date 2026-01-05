@@ -131,7 +131,11 @@ export default function Register() {
             <p className="text-xs font-semibold mb-2">How it works:</p>
             <ol className="text-xs space-y-1 list-decimal list-inside text-muted-foreground">
               <li>Choose a unique user ID</li>
-              <li>Create a passkey using your biometrics or device PIN</li>
+              <li>
+                <strong className="text-destructive">Create a passkey - this is the ONLY way to access your secrets!</strong>
+                <br />
+                <span className="ml-4">Always keep your physical passkey, or use Google/Apple password managers to sync passkeys across devices.</span>
+              </li>
               <li>Start storing your secrets securely</li>
             </ol>
           </div>

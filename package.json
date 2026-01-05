@@ -11,10 +11,17 @@
     "build": "cd frontend && npm run build",
     "deploy": "npm run build && cd worker && wrangler deploy"
   },
-  "keywords": ["secret-manager", "passkeys", "webauthn", "cloudflare", "encryption"],
+  "keywords": [
+    "secret-manager",
+    "passkeys",
+    "webauthn",
+    "cloudflare",
+    "encryption"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.0.3",
     "concurrently": "^8.2.2"
   }
 }

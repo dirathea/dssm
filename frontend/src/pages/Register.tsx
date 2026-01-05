@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { startRegistration } from '@simplewebauthn/browser'
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,17 +41,24 @@ export default function Register() {
         // Auto-login after registration
         // We need to login to get a JWT token
         const loginOptions = await api.loginStart(userId.trim()) as any
-        const loginCredential = await startRegistration(loginOptions)
+        const loginCredential = await startAuthentication(loginOptions)
         const loginResult = await api.loginFinish(userId.trim(), loginCredential)
 
         await login(userId.trim(), loginResult.token, loginResult.credentialId)
+        toast.success('Account created!', {
+          description: 'Welcome to DSSM. Your secrets are safe with us.',
+        })
         navigate('/vault')
       } else {
-        setError('Registration failed. Please try again.')
+        const errorMsg = 'Registration failed. Please try again.'
+        toast.error('Registration failed', { description: errorMsg })
+        setError(errorMsg)
       }
     } catch (err: any) {
       console.error('Registration error:', err)
-      setError(err.message || 'Failed to register. Please try again.')
+      const errorMsg = err.message || 'Failed to register. Please try again.'
+      toast.error('Registration failed', { description: errorMsg })
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -123,7 +131,11 @@ export default function Register() {
             <p className="text-xs font-semibold mb-2">How it works:</p>
             <ol className="text-xs space-y-1 list-decimal list-inside text-muted-foreground">
               <li>Choose a unique user ID</li>
-              <li>Create a passkey using your biometrics or device PIN</li>
+              <li>
+                <strong className="text-destructive">Create a passkey - this is the ONLY way to access your secrets!</strong>
+                <br />
+                <span className="ml-4">Always keep your physical passkey, or use Google/Apple password managers to sync passkeys across devices.</span>
+              </li>
               <li>Start storing your secrets securely</li>
             </ol>
           </div>

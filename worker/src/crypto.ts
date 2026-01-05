@@ -12,7 +12,7 @@ export async function createJWT(userId: string, secret: string): Promise<string>
   const payload: JWTPayload = {
     userId,
     iat: now,
-    exp: now + 7 * 24 * 60 * 60, // 7 days
+    exp: now + 48 * 60 * 60, // 48 hours
   }
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header))

@@ -24,6 +24,15 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      
+      // Handle JWT expiration with custom event
+      if (response.status === 401) {
+        const errorMsg = error.error || ''
+        if (errorMsg.includes('expired') || errorMsg.includes('Invalid or expired token')) {
+          window.dispatchEvent(new CustomEvent('auth:expired'))
+        }
+      }
+      
       throw new Error(error.error || `HTTP ${response.status}`)
     }
 

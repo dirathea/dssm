@@ -1,20 +1,11 @@
-import { useState } from 'react'
-import { Eye, EyeOff, Copy, Trash2 } from 'lucide-react'
-import { Button } from './ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from './ui/alert-dialog'
+import { useState, useCallback } from 'react'
+import { toast } from 'sonner'
+import { TableCell, TableRow } from './ui/table'
 import { cryptoService } from '../crypto'
 import { api } from '../api'
+import SecretKeyCell from './SecretItem/SecretKeyCell'
+import SecretValueCell from './SecretItem/SecretValueCell'
+import SecretItemActions from './SecretItem/SecretItemActions'
 
 interface SecretItemProps {
   secret: {
@@ -27,13 +18,31 @@ interface SecretItemProps {
   }
   token: string
   onDelete: () => void
+  onUpdate: () => void
 }
 
-export default function SecretItem({ secret, token, onDelete }: SecretItemProps) {
+export default function SecretItem({ secret, token, onDelete, onUpdate }: SecretItemProps) {
   const [revealed, setRevealed] = useState(false)
   const [decryptedValue, setDecryptedValue] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
+
+  const decryptSecret = useCallback(async () => {
+    if (decryptedValue) {
+      return decryptedValue
+    }
+
+    try {
+      const value = await cryptoService.decrypt(secret.encrypted_value, secret.iv)
+      setDecryptedValue(value)
+      return value
+    } catch (error) {
+      console.error('Failed to decrypt secret:', error)
+      toast.error('Decryption failed', {
+        description: 'Failed to decrypt secret. Please refresh and log in again.',
+      })
+      throw error
+    }
+  }, [decryptedValue, secret.encrypted_value, secret.iv])
 
   const handleReveal = async () => {
     if (revealed && decryptedValue) {
@@ -43,108 +52,65 @@ export default function SecretItem({ secret, token, onDelete }: SecretItemProps)
 
     setLoading(true)
     try {
-      const value = await cryptoService.decrypt(secret.encrypted_value, secret.iv)
-      setDecryptedValue(value)
+      await decryptSecret()
       setRevealed(true)
     } catch (error) {
-      console.error('Failed to decrypt secret:', error)
-      alert('Failed to decrypt secret. Please refresh and try again.')
+      // Error already handled in decryptSecret
     } finally {
       setLoading(false)
     }
   }
 
   const handleCopy = async () => {
-    if (!decryptedValue) return
-
     try {
-      await navigator.clipboard.writeText(decryptedValue)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      // Decrypt if not already decrypted
+      const value = await decryptSecret()
+      await navigator.clipboard.writeText(value)
+      toast.success('Copied to clipboard', {
+        description: 'Secret value copied.',
+      })
     } catch (error) {
       console.error('Failed to copy:', error)
+      toast.error('Copy failed', {
+        description: 'Failed to copy to clipboard.',
+      })
     }
   }
 
   const handleDelete = async () => {
     try {
       await api.deleteSecret(token, secret.id)
+      toast.success('Secret deleted', {
+        description: `"${secret.name}" has been removed.`,
+      })
       onDelete()
     } catch (error) {
       console.error('Failed to delete secret:', error)
-      alert('Failed to delete secret. Please try again.')
+      toast.error('Delete failed', {
+        description: 'Failed to delete secret. Please try again.',
+      })
     }
   }
 
   return (
-    <Card className="bg-white hover:shadow-brutal-lg transition-all">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{secret.name}</span>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleReveal}
-              disabled={loading}
-              title={revealed ? 'Hide' : 'Reveal'}
-            >
-              {revealed ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </Button>
-
-            {revealed && decryptedValue && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopy}
-                title={copied ? 'Copied!' : 'Copy'}
-              >
-                <Copy className={`h-5 w-5 ${copied ? 'text-primary' : ''}`} />
-              </Button>
-            )}
-
-            <AlertDialog>
-              <AlertDialogTrigger>
-                <Button variant="ghost" size="icon" title="Delete">
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Secret?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{secret.name}"? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    <Button variant="outline">Cancel</Button>
-                  </AlertDialogCancel>
-                  <AlertDialogAction>
-                    <Button variant="destructive" onClick={handleDelete}>
-                      Delete
-                    </Button>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {revealed && decryptedValue ? (
-          <div className="p-4 border-4 border-black bg-primary/5 rounded-sm font-mono text-sm break-all">
-            {decryptedValue}
-          </div>
-        ) : (
-          <div className="p-4 border-4 border-black bg-muted rounded-sm text-sm text-muted-foreground">
-            •••••••••••••••••••••
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground mt-2">
-          Created: {new Date(secret.created_at).toLocaleDateString()}
-        </p>
-      </CardContent>
-    </Card>
+    <TableRow className="bg-white hover:bg-gray-50">
+      <SecretKeyCell name={secret.name} createdAt={secret.created_at} />
+      
+      <SecretValueCell revealed={revealed} decryptedValue={decryptedValue} />
+      
+      <TableCell className="text-right">
+        <SecretItemActions
+          secret={secret}
+          token={token}
+          revealed={revealed}
+          loading={loading}
+          onReveal={handleReveal}
+          onCopy={handleCopy}
+          onDelete={handleDelete}
+          decryptSecret={decryptSecret}
+          onUpdate={onUpdate}
+        />
+      </TableCell>
+    </TableRow>
   )
 }

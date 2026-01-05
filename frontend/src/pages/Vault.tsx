@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import SecretItem from '@/components/SecretItem'
 import SecretForm from '@/components/SecretForm'
 import { useAuth } from '../auth'
@@ -60,7 +67,7 @@ export default function Vault() {
               Welcome back, {userId}!
             </p>
           </div>
-          <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
+          <Button variant="neutral" size="icon" onClick={handleLogout} title="Logout">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
@@ -110,15 +117,27 @@ export default function Vault() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {secrets.map((secret) => (
-              <SecretItem
-                key={secret.id}
-                secret={secret}
-                token={token!}
-                onDelete={fetchSecrets}
-              />
-            ))}
+          <div className="border-4 border-black rounded-sm shadow-brutal bg-white overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-white hover:bg-white">
+                  <TableHead className="font-bold text-base">Key</TableHead>
+                  <TableHead className="font-bold text-base w-[120px] md:w-auto">Value</TableHead>
+                  <TableHead className="text-right font-bold text-base w-[60px] md:w-auto">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {secrets.map((secret) => (
+                  <SecretItem
+                    key={secret.id}
+                    secret={secret}
+                    token={token!}
+                    onDelete={fetchSecrets}
+                    onUpdate={fetchSecrets}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 
@@ -129,7 +148,8 @@ export default function Vault() {
             <li>All secrets are encrypted client-side before being sent to the server</li>
             <li>The server cannot decrypt your secrets</li>
             <li>If you lose your passkey, your secrets cannot be recovered</li>
-            <li>Your encryption key is stored only in memory and cleared on logout</li>
+            <li>Your encryption key is stored in memory and cleared when you close the tab</li>
+            <li>Sessions expire after 48 hours for security</li>
           </ul>
         </div>
       </div>

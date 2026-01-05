@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm run build && concurrently \"npm run dev:watch\" \"npm run dev:worker\"",
     "dev:watch": "cd frontend && npx vite build --watch --mode development",
-    "dev:worker": "cd worker && npx wrangler dev",
+    "dev:worker": "cd worker && npx wrangler dev --persist-to d1/",
     "install:all": "npm install && cd worker && npm install && cd ../frontend && npm install",
     "build": "cd frontend && npm run build",
     "deploy": "npm run build && cd worker && wrangler deploy"

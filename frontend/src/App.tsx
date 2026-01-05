@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth'
 import { Toaster } from '@/components/ui/sonner'
 import Register from './pages/Register'
 import Login from './pages/Login'
+import Recovery from './pages/Recovery'
 import Vault from './pages/Vault'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/recovery" element={<Recovery />} />
             <Route
               path="/vault"
               element={

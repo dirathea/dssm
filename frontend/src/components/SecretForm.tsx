@@ -183,7 +183,7 @@ export default function SecretForm({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="neutral"
               onClick={() => setOpen(false)}
               disabled={loading || decrypting}
             >

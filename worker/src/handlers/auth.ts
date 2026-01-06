@@ -1,11 +1,10 @@
 import { Context } from 'hono'
 import { WebAuthnService } from '../auth'
 import { createJWT } from '../crypto'
-import { Database } from '../db'
+import { UserRepository, RecoveryCodeRepository } from '../repositories'
 import {
   generateRecoveryCodes,
   hashRecoveryCode,
-  verifyRecoveryCode,
   isValidRecoveryCodeFormat,
 } from '../recovery'
 
@@ -44,13 +43,11 @@ export async function registerFinish(c: Context) {
 
     // Generate 12 recovery codes
     const recoveryCodes = generateRecoveryCodes(12)
-    
+
     // Hash and store recovery codes
-    const db = c.get('db') as Database
-    const codeHashes = await Promise.all(
-      recoveryCodes.map((code) => hashRecoveryCode(code))
-    )
-    await db.createRecoveryCodes(userId, codeHashes)
+    const recoveryCodeRepo = c.get('recoveryCodeRepo') as RecoveryCodeRepository
+    const codeHashes = await Promise.all(recoveryCodes.map((code) => hashRecoveryCode(code)))
+    await recoveryCodeRepo.createRecoveryCodes(userId, codeHashes)
 
     return c.json({ success: true, credentialId, recoveryCodes })
   } catch (error) {
@@ -117,7 +114,12 @@ export async function recoverStart(c: Context) {
   try {
     const { userId, recoveryCode } = await c.req.json()
 
-    if (!userId || typeof userId !== 'string' || !recoveryCode || typeof recoveryCode !== 'string') {
+    if (
+      !userId ||
+      typeof userId !== 'string' ||
+      !recoveryCode ||
+      typeof recoveryCode !== 'string'
+    ) {
       return c.json({ error: 'Invalid request' }, 400)
     }
 
@@ -127,15 +129,16 @@ export async function recoverStart(c: Context) {
     }
 
     // Check if user exists
-    const db = c.get('db') as Database
-    const user = await db.getUser(userId)
+    const userRepo = c.get('userRepo') as UserRepository
+    const user = await userRepo.getUser(userId)
     if (!user) {
       return c.json({ error: 'User not found' }, 404)
     }
 
     // Hash the recovery code and check if it exists and is unused
     const codeHash = await hashRecoveryCode(recoveryCode)
-    const storedCode = await db.getUnusedRecoveryCodeByHash(userId, codeHash)
+    const recoveryCodeRepo = c.get('recoveryCodeRepo') as RecoveryCodeRepository
+    const storedCode = await recoveryCodeRepo.getUnusedRecoveryCodeByHash(userId, codeHash)
 
     if (!storedCode) {
       return c.json({ error: 'Invalid or already used recovery code' }, 400)
@@ -166,7 +169,7 @@ export async function recoverFinish(c: Context) {
       return c.json({ error: 'Invalid request' }, 400)
     }
 
-    const db = c.get('db') as Database
+    const recoveryCodeRepo = c.get('recoveryCodeRepo') as RecoveryCodeRepository
     const webauthn = c.get('webauthn') as WebAuthnService
 
     // Verify the new passkey registration
@@ -177,17 +180,17 @@ export async function recoverFinish(c: Context) {
     }
 
     // Mark the old recovery code as used
-    await db.markRecoveryCodeAsUsed(recoveryCodeId)
+    await recoveryCodeRepo.markRecoveryCodeAsUsed(recoveryCodeId)
 
     // Delete all old recovery codes
-    await db.deleteAllRecoveryCodes(userId)
+    await recoveryCodeRepo.deleteAllRecoveryCodes(userId)
 
     // Generate new set of 12 recovery codes
     const newRecoveryCodes = generateRecoveryCodes(12)
     const codeHashes = await Promise.all(
       newRecoveryCodes.map((code) => hashRecoveryCode(code))
     )
-    await db.createRecoveryCodes(userId, codeHashes)
+    await recoveryCodeRepo.createRecoveryCodes(userId, codeHashes)
 
     // Create JWT token
     const jwtSecret = c.env.JWT_SECRET

@@ -15,7 +15,7 @@ run_worker_first = ["/api/*"]
 binding = "DB"
 database_name = "dssm-db-dev"
 database_id = "08fd3b48-5b29-4dfe-84dd-fd8f19a5ed53" # Add your database_id after running wrangler d1 create
-migrations_dir = "migrations"
+migrations_dir = "drizzle"
 
 # Environment variables
 [vars]

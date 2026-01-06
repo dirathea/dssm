@@ -4,13 +4,7 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server'
-import type {
-  PublicKeyCredentialCreationOptionsJSON,
-  PublicKeyCredentialRequestOptionsJSON,
-  RegistrationResponseJSON,
-  AuthenticationResponseJSON,
-} from '@simplewebauthn/server/script/deps'
-import type { Database, Credential } from './db'
+import type { UserRepository, CredentialRepository } from './repositories'
 
 // In-memory challenge store (in production, use KV or Durable Objects)
 const challenges = new Map<string, string>()
@@ -23,21 +17,20 @@ export interface WebAuthnConfig {
 
 export class WebAuthnService {
   constructor(
-    private db: Database,
+    private userRepo: UserRepository,
+    private credentialRepo: CredentialRepository,
     private config: WebAuthnConfig
   ) {}
 
-  async generateRegistrationOptions(
-    userId: string
-  ): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  async generateRegistrationOptions(userId: string) {
     // Ensure user exists
-    let user = await this.db.getUser(userId)
+    let user = await this.userRepo.getUser(userId)
     if (!user) {
-      user = await this.db.createUser(userId)
+      user = await this.userRepo.createUser(userId)
     }
 
     // Get existing credentials for this user
-    const existingCredentials = await this.db.getCredentialsByUser(userId)
+    const existingCredentials = await this.credentialRepo.getCredentialsByUser(userId)
 
     const options = await generateRegistrationOptions({
       rpName: this.config.rpName,
@@ -64,7 +57,7 @@ export class WebAuthnService {
 
   async verifyRegistration(
     userId: string,
-    response: RegistrationResponseJSON
+    response: any
   ): Promise<{ verified: boolean; credentialId?: string }> {
     const expectedChallenge = challenges.get(userId)
     if (!expectedChallenge) {
@@ -87,11 +80,11 @@ export class WebAuthnService {
       const { credentialPublicKey, credentialID, counter } = verification.registrationInfo
 
       // Store credential in database
-      const transports = response.response.transports
-      await this.db.createCredential(
+      const transports = response.response?.transports
+      await this.credentialRepo.createCredential(
         credentialID.toString(),
         userId,
-        credentialPublicKey,
+        credentialPublicKey.buffer as ArrayBuffer,
         counter,
         transports
       )
@@ -106,13 +99,11 @@ export class WebAuthnService {
     }
   }
 
-  async generateAuthenticationOptions(
-    userId: string
-  ): Promise<PublicKeyCredentialRequestOptionsJSON | null> {
-    const user = await this.db.getUser(userId)
+  async generateAuthenticationOptions(userId: string) {
+    const user = await this.userRepo.getUser(userId)
     if (!user) return null
 
-    const credentials = await this.db.getCredentialsByUser(userId)
+    const credentials = await this.credentialRepo.getCredentialsByUser(userId)
     if (credentials.length === 0) return null
 
     const options = await generateAuthenticationOptions({
@@ -133,7 +124,7 @@ export class WebAuthnService {
 
   async verifyAuthentication(
     userId: string,
-    response: AuthenticationResponseJSON
+    response: any
   ): Promise<{ verified: boolean; credentialId?: string }> {
     const expectedChallenge = challenges.get(userId)
     if (!expectedChallenge) {
@@ -141,7 +132,7 @@ export class WebAuthnService {
     }
 
     try {
-      const credential = await this.db.getCredential(response.id)
+      const credential = await this.credentialRepo.getCredential(response.id)
       if (!credential || credential.user_id !== userId) {
         return { verified: false }
       }
@@ -164,7 +155,10 @@ export class WebAuthnService {
       }
 
       // Update counter
-      await this.db.updateCredentialCounter(credential.id, verification.authenticationInfo.newCounter)
+      await this.credentialRepo.updateCredentialCounter(
+        credential.id,
+        verification.authenticationInfo.newCounter
+      )
 
       // Clean up challenge
       challenges.delete(userId)

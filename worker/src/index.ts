@@ -76,12 +76,40 @@ app.use('/api/*', async (c, next) => {
   c.set('secretRepo', secretRepo)
   c.set('recoveryCodeRepo', recoveryCodeRepo)
 
+  // Get origin from request, respecting reverse proxy headers
+  // This handles: OrbStack, Cloudflare, nginx, Traefik, etc.
+  const getOrigin = (c: any): string => {
+    // Check for X-Forwarded-Proto header (standard reverse proxy header)
+    const forwardedProto = c.req.header('X-Forwarded-Proto')
+    const forwardedHost = c.req.header('X-Forwarded-Host') || c.req.header('Host')
+    
+    if (forwardedProto && forwardedHost) {
+      return `${forwardedProto}://${forwardedHost}`
+    }
+    
+    // Cloudflare specific: CF-Visitor header
+    const cfVisitor = c.req.header('CF-Visitor')
+    if (cfVisitor) {
+      try {
+        const visitor = JSON.parse(cfVisitor)
+        const host = c.req.header('Host')
+        if (visitor.scheme && host) {
+          return `${visitor.scheme}://${host}`
+        }
+      } catch {
+        // Invalid JSON, continue to fallback
+      }
+    }
+    
+    // Fallback to direct request URL
+    return new URL(c.req.url).origin
+  }
+
   // Create WebAuthn service
   const webauthnConfig = {
     rpName: c.env.RP_NAME || 'Dead Simple Secret Manager',
     rpID: c.env.RP_ID || 'localhost',
-    // Get origin from request
-    origin: new URL(c.req.url).origin,
+    origin: getOrigin(c),
   }
   const webauthn = new WebAuthnService(userRepo, credentialRepo, webauthnConfig)
   c.set('webauthn', webauthn)

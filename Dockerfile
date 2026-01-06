@@ -47,12 +47,7 @@ COPY worker/drizzle ./drizzle
 RUN mkdir -p /app/data
 
 # Environment variables (can be overridden)
-ENV PORT=8787
-ENV HOST=0.0.0.0
-ENV DATABASE_PATH=/app/data/taplock.db
-ENV JWT_SECRET=change-this-in-production
-ENV RP_ID=localhost
-ENV RP_NAME="TapLock"
+# Environment variables are set via docker-compose.yml or .env
 
 # Expose port
 EXPOSE 8787

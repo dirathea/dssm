@@ -1,12 +1,13 @@
 # AGENTS.md - Development Guide for AI Coding Agents
 
-This guide provides essential information for AI agents working on the DSSM (Dead Simple Secret Manager) codebase.
+This guide provides essential information for AI agents working on the TapLock codebase.
 
 ## Project Overview
 
-DSSM is a minimalist secret manager with passkey authentication, built with:
+TapLock is a minimalist secret manager with passkey authentication, built with:
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
-- **Backend**: Cloudflare Workers + Hono framework + D1 (SQLite)
+- **Backend**: Hono framework + Drizzle ORM (runs on Cloudflare Workers or Node.js)
+- **Database**: Cloudflare D1 (cloud) or SQLite via better-sqlite3 (self-hosted)
 - **Auth**: WebAuthn/Passkeys (@simplewebauthn)
 - **Encryption**: Client-side AES-256-GCM
 
@@ -15,7 +16,7 @@ The app uses a **neobrutalist design** with thick borders, brutal shadows, and b
 ## Project Structure
 
 ```
-dssm/
+taplock/
 ├── frontend/          # React SPA
 │   ├── src/
 │   │   ├── components/
@@ -28,16 +29,20 @@ dssm/
 │   │   ├── auth.tsx          # Auth context provider
 │   │   └── index.css         # Design system + Tailwind config
 │   └── package.json
-├── worker/            # Cloudflare Worker backend
+├── worker/            # Backend (Cloudflare Workers or Node.js)
 │   ├── src/
 │   │   ├── handlers/         # Route handlers (auth.ts, secrets.ts)
+│   │   ├── repositories/     # Data access layer (Drizzle ORM)
 │   │   ├── index.ts          # Main Hono app + middleware
-│   │   ├── db.ts             # D1 database queries (Database class)
+│   │   ├── schema.ts         # Drizzle schema definitions
+│   │   ├── db.ts             # Database connection factory
 │   │   ├── auth.ts           # WebAuthn service
+│   │   ├── server.ts         # Node.js entry point (self-hosted)
 │   │   └── crypto.ts         # JWT + crypto utilities
-│   ├── migrations/           # D1 migrations
-│   ├── schema.sql            # Database schema
+│   ├── drizzle/              # Database migrations
 │   └── wrangler.toml         # Cloudflare config
+├── Dockerfile         # Docker build for self-hosting
+├── docker-compose.yml # Docker Compose configuration
 └── package.json       # Root workspace scripts
 ```
 

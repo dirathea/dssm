@@ -73,11 +73,14 @@ export default function Login() {
       <Card className="w-full max-w-md bg-white">
         <CardHeader className="space-y-2">
           <CardTitle className="text-4xl font-black text-center">
-            Welcome Back!
+            TapLock
           </CardTitle>
           <CardDescription className="text-center text-base font-semibold">
-            Sign in to access your vault
+            Tap to Unlock Your Secrets
           </CardDescription>
+          <p className="text-center text-sm text-muted-foreground">
+            No passwords. Just tap your fingerprint or face ID.
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">

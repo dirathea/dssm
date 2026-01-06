@@ -107,7 +107,7 @@ app.use('/api/*', async (c, next) => {
 
   // Create WebAuthn service
   const webauthnConfig = {
-    rpName: c.env.RP_NAME || 'Dead Simple Secret Manager',
+    rpName: c.env.RP_NAME || 'TapLock',
     rpID: c.env.RP_ID || 'localhost',
     origin: getOrigin(c),
   }

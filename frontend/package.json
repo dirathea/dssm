@@ -1,7 +1,7 @@
 {
-  "name": "dssm-frontend",
+  "name": "taplock-frontend",
   "version": "1.0.0",
-  "description": "Dead Simple Secret Manager - Frontend",
+  "description": "TapLock - A dead simple secret manager powered by passkeys. No passwords, just tap.",
   "type": "module",
   "scripts": {
     "dev": "vite",

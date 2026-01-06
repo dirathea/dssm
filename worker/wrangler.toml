@@ -1,4 +1,4 @@
-name = "dssm-worker"
+name = "taplock-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -21,4 +21,4 @@ migrations_dir = "drizzle"
 [vars]
 JWT_SECRET = "change-this-to-a-secure-random-string-in-production"
 RP_ID = "localhost" # Change to your domain in production
-RP_NAME = "Dead Simple Secret Manager"
+RP_NAME = "TapLock"

@@ -1,7 +1,7 @@
 {
-  "name": "dssm-worker",
+  "name": "taplock-worker",
   "version": "1.0.0",
-  "description": "Dead Simple Secret Manager - Cloudflare Worker backend",
+  "description": "TapLock - Passkey-powered secret manager backend",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",

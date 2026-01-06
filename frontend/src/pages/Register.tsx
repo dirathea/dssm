@@ -100,13 +100,13 @@ export default function Register() {
       <Card className="w-full max-w-md bg-white">
         <CardHeader className="space-y-2">
           <CardTitle className="text-4xl font-black text-center">
-            DSSM
+            TapLock
           </CardTitle>
           <CardDescription className="text-center text-base font-semibold">
-            Dead Simple Secret Manager
+            Tap to Unlock Your Secrets
           </CardDescription>
           <p className="text-center text-sm text-muted-foreground">
-            Create an account with just your ID and passkey
+            No passwords. Just tap your fingerprint or face ID.
           </p>
         </CardHeader>
         <CardContent>

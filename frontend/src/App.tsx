@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './auth'
 import { Toaster } from '@/components/ui/sonner'
+import Footer from '@/components/Footer'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Recovery from './pages/Recovery'
@@ -39,21 +40,24 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/recovery" element={<Recovery />} />
-            <Route
-              path="/vault"
-              element={
-                <ProtectedRoute>
-                  <Vault />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+        <div className="min-h-screen bg-background flex flex-col">
+          <div className="flex-1">
+            <Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/recovery" element={<Recovery />} />
+              <Route
+                path="/vault"
+                element={
+                  <ProtectedRoute>
+                    <Vault />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </div>
+          <Footer />
           <Toaster />
         </div>
       </AuthProvider>

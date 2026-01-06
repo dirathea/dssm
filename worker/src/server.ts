@@ -70,7 +70,7 @@ const envBindings = {
   DATABASE_PATH,
   JWT_SECRET: process.env.JWT_SECRET || 'change-this-in-production',
   RP_ID: process.env.RP_ID || 'localhost',
-  RP_NAME: process.env.RP_NAME || 'Dead Simple Secret Manager',
+  RP_NAME: process.env.RP_NAME || 'TapLock',
   _sqliteDb: db, // Pre-initialized SQLite connection
 }
 
@@ -87,7 +87,7 @@ serverApp.use('*', serveStatic({ root: './public' }))
 serverApp.use('*', serveStatic({ root: './public', path: 'index.html' }))
 
 // Start the server
-console.log(`Starting DSSM server...`)
+console.log(`Starting TapLock server...`)
 console.log(`RP_ID: ${envBindings.RP_ID}`)
 
 serve(

@@ -39,5 +39,5 @@ database_id = "4bbd568b-bc2a-44b7-9d3a-41d7a134c786"  # Add after running: npx w
 migrations_dir = "worker/drizzle"
 
 [env.preview.vars]
-RP_ID = "preview.taplock.dev"
+RP_ID = "dirathea.workers.dev"
 RP_NAME = "TapLock Preview"

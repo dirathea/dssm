@@ -12,8 +12,8 @@ export default defineConfig({
     },
   },
   build: {
-    // Output directly to worker/public for development and production
-    outDir: '../worker/public',
+    // Output to root public/ for wrangler assets
+    outDir: '../public',
     emptyOutDir: true,
   },
 })

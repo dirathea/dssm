@@ -4,12 +4,12 @@
   "description": "TapLock - Passkey-powered secret manager backend",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
     "start": "tsx src/server.ts",
-    "d1:create": "wrangler d1 create dssm-db",
-    "d1:migrate:local": "wrangler d1 migrations apply dssm-db --local",
-    "d1:migrate:remote": "wrangler d1 migrations apply dssm-db --remote",
+    "d1:create": "wrangler d1 create taplock-db",
+    "d1:create:preview": "wrangler d1 create taplock-db-preview",
+    "d1:migrate:local": "wrangler d1 migrations apply taplock-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply taplock-db --remote",
+    "d1:migrate:preview": "wrangler d1 migrations apply taplock-db-preview --remote --env preview",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

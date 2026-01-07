@@ -1,0 +1,43 @@
+name = "taplock-worker"
+main = "worker/src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets serving (frontend SPA)
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# =============================================================================
+# Production Environment (default)
+# =============================================================================
+
+# Production D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "taplock-db"
+database_id = "72754c1f-e4a1-48a9-a7ee-e74a0ae0f588"
+migrations_dir = "worker/drizzle"
+
+# Production environment variables
+# Note: JWT_SECRET should be set via `npx wrangler secret put JWT_SECRET`
+[vars]
+RP_ID = "app.taplock.dev"
+RP_NAME = "TapLock"
+
+# =============================================================================
+# Preview Environment (for PR deployments)
+# =============================================================================
+[env.preview]
+name = "taplock-worker-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "taplock-db-preview"
+database_id = "4bbd568b-bc2a-44b7-9d3a-41d7a134c786"  # Add after running: npx wrangler d1 create taplock-db-preview
+migrations_dir = "worker/drizzle"
+
+[env.preview.vars]
+RP_ID = "preview.taplock.dev"
+RP_NAME = "TapLock Preview"

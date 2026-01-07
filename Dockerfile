@@ -18,7 +18,7 @@ RUN npm install && cd frontend && npm install && cd ../worker && npm install
 COPY frontend/ ./frontend/
 COPY worker/ ./worker/
 
-# Build frontend (outputs to worker/public)
+# Build frontend (outputs to /app/public)
 RUN cd frontend && npm run build
 
 # Production stage
@@ -34,7 +34,7 @@ RUN npm ci --omit=dev
 RUN npm install tsx
 
 # Copy built frontend from builder stage
-COPY --from=builder /app/worker/public ./public
+COPY --from=builder /app/public ./public
 
 # Copy worker source
 COPY worker/src ./src

@@ -1,267 +1,316 @@
-# DSSM Deployment Guide
+# TapLock Deployment Guide
 
-This guide will help you deploy the Dead Simple Secret Manager to Cloudflare using a single Worker with Assets serving (frontend + backend).
+This guide covers deploying TapLock to Cloudflare Workers with D1 database, including automatic preview deployments for PRs via GitHub integration.
+
+## Architecture Overview
+
+```
+GitHub Repository
+       |
+       v
+Cloudflare Workers Builds (GitHub Integration)
+       |
+       +---> main branch ---> taplock-worker (app.taplock.dev)
+       |                            |
+       |                            v
+       |                      taplock-db (production)
+       |
+       +---> PR branches ---> taplock-worker-preview (*.workers.dev)
+                                    |
+                                    v
+                              taplock-db-preview (shared)
+```
 
 ## Prerequisites
 
-1. **Cloudflare Account**: Sign up at [cloudflare.com](https://cloudflare.com) (free tier works!)
+1. **Cloudflare Account**: Sign up at [cloudflare.com](https://cloudflare.com)
 2. **Node.js**: Version 18 or higher
-3. **Wrangler CLI**: Install globally with `npm install -g wrangler`
-4. **Git**: For version control
+3. **Domain**: Optional but recommended (e.g., `taplock.dev` on Cloudflare)
 
-## Step 1: Clone and Install
+## Initial Setup (One-Time)
+
+### Step 1: Install Dependencies
 
 ```bash
-# Clone the repository
 git clone <your-repo-url>
-cd dssm
-
-# Install all dependencies
+cd taplock
 npm run install:all
 ```
 
-## Step 2: Configure Cloudflare Worker
-
-### Authenticate with Cloudflare
+### Step 2: Authenticate with Cloudflare
 
 ```bash
-wrangler login
+npx wrangler login
 ```
 
-This will open a browser window to authenticate your Cloudflare account.
-
-### Create D1 Database
+### Step 3: Create D1 Databases
 
 ```bash
-cd worker
-wrangler d1 create dssm-db
+# Production database
+npx wrangler d1 create taplock-db
+
+# Preview database (for PR deployments)
+npx wrangler d1 create taplock-db-preview
 ```
 
-**Important**: Copy the `database_id` from the output. You'll need it in the next step.
+**Important**: Copy both `database_id` values from the output.
 
-### Update wrangler.toml
+### Step 4: Update wrangler.toml
 
-Edit `worker/wrangler.toml` and add your `database_id`:
+Edit `wrangler.toml` at the project root and add your database IDs:
 
 ```toml
+# Production database
 [[d1_databases]]
 binding = "DB"
-database_name = "dssm-db"
-database_id = "your-database-id-here"  # Replace with your actual database_id
+database_name = "taplock-db"
+database_id = "your-production-database-id"  # <-- Add this
+migrations_dir = "worker/drizzle"
+
+# Preview database (in [env.preview] section)
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "taplock-db-preview"
+database_id = "your-preview-database-id"  # <-- Add this
+migrations_dir = "worker/drizzle"
 ```
 
-### Set Production Environment Variables
-
-Update the following in `worker/wrangler.toml`:
-
-```toml
-[vars]
-JWT_SECRET = "your-secure-random-string-here"  # Generate a secure random string
-RP_ID = "your-domain.com"  # Your actual domain (or workers.dev subdomain)
-RP_NAME = "Dead Simple Secret Manager"
-```
-
-**Important**: Generate a secure JWT_SECRET:
+### Step 5: Run Database Migrations
 
 ```bash
+# Production database
+npx wrangler d1 migrations apply taplock-db --remote
+
+# Preview database
+npx wrangler d1 migrations apply taplock-db-preview --remote --env preview
+```
+
+### Step 6: Set Secrets
+
+Secrets are stored securely in Cloudflare, not in config files.
+
+```bash
+# Generate a secure secret
 openssl rand -base64 32
+
+# Set for production
+npx wrangler secret put JWT_SECRET
+# (paste your generated secret when prompted)
+
+# Set for preview environment
+npx wrangler secret put JWT_SECRET --env preview
+# (can use the same or different secret)
 ```
 
-### Run Database Migrations
+### Step 7: Initial Deployment
+
+Deploy both environments to create the Workers:
 
 ```bash
-npm run d1:migrate
-```
-
-This creates the necessary tables in your D1 database.
-
-## Step 3: Build and Deploy Everything
-
-Now comes the easy part - deploy everything with a single command!
-
-```bash
-# From the root directory
+# Deploy production
 npm run deploy
+
+# Deploy preview
+npm run deploy:preview
 ```
 
-This command will:
-1. Build the frontend (React + Vite)
-2. Copy the built files to `worker/public/`
-3. Deploy the Worker with Assets to Cloudflare
+### Step 8: Add Custom Domain (Production)
 
-Your application will be deployed to:
+1. Go to **Cloudflare Dashboard** > **Workers & Pages**
+2. Select `taplock-worker`
+3. Go to **Settings** > **Domains & Routes**
+4. Click **Add** > **Custom Domain**
+5. Enter `app.taplock.dev` (or your domain)
+6. Cloudflare auto-configures DNS if the domain is on Cloudflare
+
+### Step 9: Add Preview Domain
+
+1. Go to **Cloudflare Dashboard** > **Workers & Pages**
+2. Select `taplock-worker-preview`
+3. Go to **Settings** > **Domains & Routes**
+4. Click **Add** > **Custom Domain**
+5. Enter `preview.taplock.dev`
+
+## GitHub Integration (Automatic Deployments)
+
+### Connect Repository
+
+1. Go to **Cloudflare Dashboard** > **Workers & Pages**
+2. Select `taplock-worker`
+3. Go to **Settings** > **Builds** > **Build configuration**
+4. Click **Connect** and select your GitHub repository
+
+### Configure Build Settings
+
+| Setting | Value |
+|---------|-------|
+| Production branch | `main` |
+| Root directory | *(leave empty)* |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+
+### Enable Preview Deployments
+
+1. In the same **Build configuration** section
+2. Enable **Builds on non-production branches**
+3. Set **Non-production deploy command**: `npx wrangler deploy --env preview`
+
+### How It Works After Setup
+
+| Action | Result |
+|--------|--------|
+| Push to `main` | Auto-deploys to `app.taplock.dev` |
+| Open PR | Auto-deploys preview to `*.workers.dev` URL |
+| Merge PR | Auto-deploys to `app.taplock.dev` |
+
+## Local Development
+
+### Setup Local Environment
+
+```bash
+# Copy the example env file
+cp .dev.vars.example .dev.vars
+
+# Edit .dev.vars and set your local JWT_SECRET
 ```
-https://dssm-<your-subdomain>.workers.dev
+
+### Run Development Server
+
+```bash
+npm run dev
 ```
 
-**That's it!** Both your frontend and API are now live at the same URL.
+This will:
+- Build the frontend with watch mode
+- Start wrangler dev server at `http://localhost:8787`
+- Use local SQLite database (persisted to `.wrangler/state`)
 
-- Frontend (SPA): `https://dssm-<your-subdomain>.workers.dev/`
-- API endpoints: `https://dssm-<your-subdomain>.workers.dev/auth/*`, `/secrets/*`
+## Project Structure
 
-### Why This Works
-
-The Worker uses the `assets` configuration in `wrangler.toml`:
-```toml
-[assets]
-directory = "./public"
-not_found_handling = "single-page-application"
+```
+taplock/
+├── wrangler.toml          # Cloudflare Worker config (environments)
+├── .dev.vars              # Local dev secrets (gitignored)
+├── .dev.vars.example      # Template for local secrets
+├── public/                # Frontend build output (gitignored)
+├── frontend/              # React + Vite frontend
+├── worker/                # Cloudflare Worker backend
+│   ├── src/               # Worker source code
+│   └── drizzle/           # Database migrations
+└── package.json           # Root scripts
 ```
 
-This tells Cloudflare to:
-- Serve static files from `worker/public/`
-- Route all non-API requests to `index.html` (SPA routing)
-- Cache assets at the edge globally
+## Available Scripts
 
-## Step 4: Test Your Deployment
+### Root Level
 
-1. Visit your deployed URL: `https://dssm-<your-subdomain>.workers.dev`
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start local development server |
+| `npm run build` | Build frontend only |
+| `npm run deploy` | Build + deploy to production |
+| `npm run deploy:preview` | Build + deploy to preview |
+| `npm run install:all` | Install all dependencies |
 
-2. Click "Create one" to register a new account
+### Worker Level (from `worker/` directory)
 
-3. Enter a user ID and create a passkey
+| Command | Description |
+|---------|-------------|
+| `npm run d1:create` | Create production D1 database |
+| `npm run d1:create:preview` | Create preview D1 database |
+| `npm run d1:migrate:local` | Run migrations locally |
+| `npm run d1:migrate:remote` | Run migrations on production |
+| `npm run d1:migrate:preview` | Run migrations on preview |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run start` | Run self-hosted Node.js server |
 
-4. Add a test secret
+## Environment Configuration
 
-5. Verify encryption by checking the D1 database:
-   ```bash
-   wrangler d1 execute dssm-db --command="SELECT * FROM secrets"
-   ```
+### Production (`app.taplock.dev`)
 
-   You should see encrypted values, not plaintext!
+| Variable | Value |
+|----------|-------|
+| `RP_ID` | `app.taplock.dev` |
+| `RP_NAME` | `TapLock` |
+| `JWT_SECRET` | Set via `wrangler secret put` |
+| Database | `taplock-db` |
 
-## Optional: Custom Domain
+### Preview (`preview.taplock.dev`)
 
-Since frontend and backend are served from the same Worker, you only need **one custom domain**!
+| Variable | Value |
+|----------|-------|
+| `RP_ID` | `preview.taplock.dev` |
+| `RP_NAME` | `TapLock Preview` |
+| `JWT_SECRET` | Set via `wrangler secret put --env preview` |
+| Database | `taplock-db-preview` |
 
-1. Go to Workers dashboard → Your worker (`dssm-worker`) → Triggers
+### Local Development
 
-2. Click "Add Custom Domain"
-
-3. Add your domain (e.g., `vault.yourdomain.com`)
-
-4. Follow DNS setup instructions (add CNAME record)
-
-5. Update `RP_ID` in `wrangler.toml`:
-   ```toml
-   [vars]
-   RP_ID = "vault.yourdomain.com"
-   ```
-
-6. Redeploy:
-   ```bash
-   npm run deploy
-   ```
-
-**That's it!** Both your frontend and API will be available at `https://vault.yourdomain.com`
-
-No CORS configuration needed since everything is same-origin!
+| Variable | Value |
+|----------|-------|
+| `RP_ID` | `localhost` (auto-set by wrangler) |
+| `JWT_SECRET` | Set in `.dev.vars` |
+| Database | Local SQLite |
 
 ## Troubleshooting
 
 ### Passkeys Not Working
 
-- Check that `RP_ID` in `wrangler.toml` matches your deployed domain
-- Ensure HTTPS is enabled (automatic with Cloudflare)
-- Verify you're using a modern browser with WebAuthn support
+- Ensure `RP_ID` matches your deployed domain exactly
+- HTTPS is required (automatic with Cloudflare)
+- Clear browser data and re-register if domain changed
 
 ### Database Errors
 
-- Ensure migrations ran successfully: `npm run d1:migrate`
-- Check D1 binding name matches `wrangler.toml`: `binding = "DB"`
-- Verify database_id is set in wrangler.toml
-
-### Frontend Not Loading
-
-- Ensure frontend was built: `npm run build`
-- Check that `worker/public/` contains the built files
-- Verify assets configuration in `wrangler.toml`
-
-### Authentication Fails
-
-- Generate a new secure JWT_SECRET
-- Redeploy Worker after changing secrets
-- Clear browser cookies and try again
-
-## Monitoring
-
-### View Logs
-
 ```bash
-# Worker logs
-wrangler tail
+# Check migrations status
+npx wrangler d1 migrations list taplock-db --remote
 
-# D1 queries
-wrangler d1 execute dssm-db --command="SELECT COUNT(*) FROM users"
+# Re-run migrations
+npx wrangler d1 migrations apply taplock-db --remote
 ```
 
-### Analytics
+### Preview Deployments Not Working
 
-View analytics in Cloudflare Dashboard:
-- Workers → Your worker → Analytics
-- Pages → Your project → Analytics
+- Ensure preview database has migrations applied
+- Check that `JWT_SECRET` is set for preview env
+- Verify GitHub integration is connected
+
+### Build Failures
+
+```bash
+# Clean and rebuild
+rm -rf public/ node_modules/
+npm run install:all
+npm run build
+```
+
+## Backup & Restore
+
+### Export Database
+
+```bash
+npx wrangler d1 export taplock-db --remote --output=backup.sql
+```
+
+### Restore Database
+
+```bash
+npx wrangler d1 execute taplock-db --remote --file=backup.sql
+```
 
 ## Security Checklist
 
-- [ ] Generated secure JWT_SECRET
-- [ ] Updated CORS to only allow your domains
-- [ ] Set RP_ID to your actual domain
-- [ ] Enabled HTTPS (automatic with Cloudflare)
-- [ ] Tested passkey registration and login
-- [ ] Verified secrets are encrypted in database
-- [ ] Set up rate limiting (optional, using Workers KV)
+- [ ] JWT_SECRET set via `wrangler secret put` (not in config files)
+- [ ] RP_ID matches your actual domain
+- [ ] HTTPS enabled (automatic with Cloudflare)
+- [ ] Preview environment uses separate database
+- [ ] `.dev.vars` is gitignored
 
-## Cost
+## Cost (Cloudflare Free Tier)
 
-On Cloudflare's free tier:
 - **Workers**: 100,000 requests/day
 - **D1**: 5 million reads, 100,000 writes per day
-- **Pages**: Unlimited requests
+- **Custom domains**: Free with Cloudflare DNS
 
-This is more than enough for personal use!
-
-## Updating
-
-```bash
-# Update Worker
-cd worker
-git pull
-npm install
-npm run deploy
-
-# Update Frontend
-cd ../frontend
-git pull
-npm install
-npm run build
-# If using direct upload:
-wrangler pages deploy dist --project-name=dssm
-# If using GitHub integration, just push to trigger rebuild
-```
-
-## Backup
-
-### Backup D1 Database
-
-```bash
-# Export all data
-wrangler d1 export dssm-db --output=backup.sql
-
-# Backup to local file
-wrangler d1 execute dssm-db --command="SELECT * FROM secrets" > secrets-backup.json
-```
-
-### Restore D1 Database
-
-```bash
-wrangler d1 execute dssm-db --file=backup.sql
-```
-
-## Support
-
-If you encounter issues:
-1. Check the troubleshooting section above
-2. Review Cloudflare Workers/Pages docs
-3. Open an issue on GitHub
-
-Enjoy your Dead Simple Secret Manager! 🔒
+More than enough for personal use!

@@ -4,34 +4,37 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files first
+# Copy workspace configuration
 COPY package*.json ./
 
-# Copy frontend and worker package files
+# Copy workspace package files
 COPY frontend/package*.json ./frontend/
 COPY worker/package*.json ./worker/
 
-# Install all dependencies (root, frontend, worker)
-RUN npm install && cd frontend && npm install && cd ../worker && npm install
+# Install all workspace dependencies
+RUN npm install
 
 # Copy source code
 COPY frontend/ ./frontend/
 COPY worker/ ./worker/
 
-# Build frontend (outputs to /app/public)
-RUN cd frontend && npm run build
+# Build frontend using workspace syntax (outputs to /app/public)
+RUN npm run build -w frontend
 
 # Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy worker package files and install production dependencies
-COPY worker/package*.json ./
-RUN npm ci --omit=dev
+# Copy workspace configuration and worker package files
+COPY package*.json ./
+COPY worker/package*.json ./worker/
 
-# Install tsx for running TypeScript directly
-RUN npm install tsx
+# Install production dependencies for worker workspace
+RUN npm install --workspace=worker --omit=dev --ignore-scripts
+
+# Install tsx globally for running TypeScript directly
+RUN npm install -g tsx
 
 # Copy built frontend from builder stage
 COPY --from=builder /app/public ./public

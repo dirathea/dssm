@@ -2,6 +2,35 @@
 
 This guide covers deploying TapLock to Cloudflare Workers with D1 database, including automatic preview deployments for PRs via GitHub integration.
 
+## Quick Deploy (Recommended)
+
+The fastest way to deploy TapLock is using the **Deploy to Cloudflare** button:
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dirathea/taplockdev)
+
+This automates:
+- ✅ D1 database creation and migrations
+- ✅ Worker deployment with asset serving
+- ✅ Configuration prompts for secrets and environment variables
+
+**After deployment**, you'll receive a URL like:
+```
+https://taplock-worker.<YOUR_ACCOUNT>.workers.dev
+```
+
+**Next Steps**:
+1. Visit your deployed URL and test passkey registration
+2. (Optional) Add a custom domain via Cloudflare Dashboard
+3. (Optional) Set up GitHub integration for automatic deployments
+
+See the [post-deployment configuration steps in README.md](./README.md#after-deployment) for detailed setup instructions.
+
+---
+
+## Manual Setup (Advanced)
+
+If you prefer manual control over the deployment process or need to set up preview environments, follow the detailed steps below.
+
 ## Architecture Overview
 
 ```
@@ -122,6 +151,12 @@ npm run deploy:preview
 4. Click **Add** > **Custom Domain**
 5. Enter `app.taplock.dev` (or your domain)
 6. Cloudflare auto-configures DNS if the domain is on Cloudflare
+
+**Important**: After adding custom domain, update RP_ID:
+1. Go to **Settings** > **Variables and Secrets**
+2. Edit `RP_ID` environment variable to match your custom domain
+3. Click **Save and Deploy**
+4. Users will need to re-register their passkeys after domain change
 
 ### Step 9: Add Preview Domain
 

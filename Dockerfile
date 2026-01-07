@@ -26,12 +26,15 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy workspace configuration and worker package files
-COPY package*.json ./
-COPY worker/package*.json ./worker/
+# Install build dependencies for better-sqlite3 native module
+RUN apk add --no-cache python3 make g++
 
-# Install production dependencies for worker workspace
-RUN npm install --workspace=worker --omit=dev --ignore-scripts
+# Copy only worker package files (no workspace structure)
+COPY worker/package*.json ./
+
+# Install production dependencies directly at /app/node_modules
+# Don't use --ignore-scripts because better-sqlite3 needs to compile
+RUN npm install --omit=dev
 
 # Install tsx globally for running TypeScript directly
 RUN npm install -g tsx

@@ -1,7 +1,7 @@
 {
-  "name": "dssm",
+  "name": "taplock",
   "version": "1.0.0",
-  "description": "Dead Simple Secret Manager - Passkey-based secret management",
+  "description": "TapLock - A dead simple secret manager powered by passkeys. No passwords, just tap.",
   "private": true,
   "scripts": {
     "dev": "npm run build && concurrently \"npm run dev:watch\" \"npm run dev:worker\"",
@@ -12,10 +12,11 @@
     "deploy": "npm run build && cd worker && wrangler deploy"
   },
   "keywords": [
+    "taplock",
     "secret-manager",
     "passkeys",
     "webauthn",
-    "cloudflare",
+    "fido2",
     "encryption"
   ],
   "author": "",

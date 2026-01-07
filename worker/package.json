@@ -1,20 +1,31 @@
 {
-  "name": "dssm-worker",
+  "name": "taplock-worker",
   "version": "1.0.0",
-  "description": "Dead Simple Secret Manager - Cloudflare Worker backend",
+  "description": "TapLock - Passkey-powered secret manager backend",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "start": "tsx src/server.ts",
     "d1:create": "wrangler d1 create dssm-db",
-    "d1:migrate": "wrangler d1 execute dssm-db --file=./schema.sql"
+    "d1:migrate:local": "wrangler d1 migrations apply dssm-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply dssm-db --remote",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.7",
     "@simplewebauthn/server": "^10.0.1",
+    "better-sqlite3": "^12.5.0",
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240129.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "wrangler": "^4.54.0"
   }

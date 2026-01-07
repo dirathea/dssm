@@ -1,27 +1,47 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { Database } from './db'
+import { createDatabase, type DbEnv } from './db'
 import { WebAuthnService } from './auth'
 import { verifyJWT } from './crypto'
+import {
+  UserRepository,
+  CredentialRepository,
+  SecretRepository,
+  RecoveryCodeRepository,
+} from './repositories'
 import * as authHandlers from './handlers/auth'
 import * as secretsHandlers from './handlers/secrets'
 
-export interface Env {
+export interface Env extends DbEnv {
   DB: D1Database
   JWT_SECRET: string
   RP_ID: string
   RP_NAME: string
+  DATABASE_PATH?: string // For self-hosted mode
 }
 
-const app = new Hono<{ Bindings: Env }>()
+// Define context variables type
+type Variables = {
+  userRepo: UserRepository
+  credentialRepo: CredentialRepository
+  secretRepo: SecretRepository
+  recoveryCodeRepo: RecoveryCodeRepository
+  webauthn: WebAuthnService
+  userId: string
+}
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 // CORS middleware (only for API routes)
-app.use('/api/*', cors({
-  origin: '*',
-  credentials: true,
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-}))
+app.use(
+  '/api/*',
+  cors({
+    origin: '*',
+    credentials: true,
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+  })
+)
 
 // Security headers middleware (only for API routes)
 app.use('/api/*', async (c, next) => {
@@ -41,16 +61,57 @@ app.use('/api/*', async (c, next) => {
 
 // Initialize services middleware (only for API routes)
 app.use('/api/*', async (c, next) => {
-  const db = new Database(c.env.DB)
-  c.set('db', db)
+  // Create database connection
+  const db = createDatabase(c.env)
 
-  const webauthnConfig = {
-    rpName: c.env.RP_NAME || 'Dead Simple Secret Manager',
-    rpID: c.env.RP_ID || 'localhost',
-    // Get origin from request
-    origin: new URL(c.req.url).origin,
+  // Create repositories
+  const userRepo = new UserRepository(db)
+  const credentialRepo = new CredentialRepository(db)
+  const secretRepo = new SecretRepository(db)
+  const recoveryCodeRepo = new RecoveryCodeRepository(db)
+
+  // Set repositories in context
+  c.set('userRepo', userRepo)
+  c.set('credentialRepo', credentialRepo)
+  c.set('secretRepo', secretRepo)
+  c.set('recoveryCodeRepo', recoveryCodeRepo)
+
+  // Get origin from request, respecting reverse proxy headers
+  // This handles: OrbStack, Cloudflare, nginx, Traefik, etc.
+  const getOrigin = (c: any): string => {
+    // Check for X-Forwarded-Proto header (standard reverse proxy header)
+    const forwardedProto = c.req.header('X-Forwarded-Proto')
+    const forwardedHost = c.req.header('X-Forwarded-Host') || c.req.header('Host')
+    
+    if (forwardedProto && forwardedHost) {
+      return `${forwardedProto}://${forwardedHost}`
+    }
+    
+    // Cloudflare specific: CF-Visitor header
+    const cfVisitor = c.req.header('CF-Visitor')
+    if (cfVisitor) {
+      try {
+        const visitor = JSON.parse(cfVisitor)
+        const host = c.req.header('Host')
+        if (visitor.scheme && host) {
+          return `${visitor.scheme}://${host}`
+        }
+      } catch {
+        // Invalid JSON, continue to fallback
+      }
+    }
+    
+    // Fallback to direct request URL
+    return new URL(c.req.url).origin
   }
-  const webauthn = new WebAuthnService(db, webauthnConfig)
+
+  // Create WebAuthn service
+  const webauthnConfig = {
+    rpName: c.env.RP_NAME || 'TapLock',
+    rpID: c.env.RP_ID || 'localhost',
+    origin: getOrigin(c),
+  }
+  const webauthn = new WebAuthnService(userRepo, credentialRepo, webauthnConfig)
   c.set('webauthn', webauthn)
 
   await next()
@@ -103,6 +164,11 @@ app.get('/api/secrets', requireAuth, secretsHandlers.listSecrets)
 app.post('/api/secrets', requireAuth, secretsHandlers.createSecret)
 app.put('/api/secrets/:id', requireAuth, secretsHandlers.updateSecret)
 app.delete('/api/secrets/:id', requireAuth, secretsHandlers.deleteSecret)
+
+// Health check endpoint (for Docker health checks)
+app.get('/api/health', (c) => {
+  return c.json({ status: 'ok', timestamp: Date.now() })
+})
 
 // Error handler
 app.onError((err, c) => {

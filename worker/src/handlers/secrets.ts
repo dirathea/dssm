@@ -1,12 +1,12 @@
 import { Context } from 'hono'
-import { Database } from '../db'
+import { SecretRepository } from '../repositories'
 
 export async function listSecrets(c: Context) {
   try {
     const userId = c.get('userId') as string
-    const db = c.get('db') as Database
+    const secretRepo = c.get('secretRepo') as SecretRepository
 
-    const secrets = await db.getSecretsByUser(userId)
+    const secrets = await secretRepo.getSecretsByUser(userId)
 
     return c.json({ secrets })
   } catch (error) {
@@ -18,14 +18,14 @@ export async function listSecrets(c: Context) {
 export async function createSecret(c: Context) {
   try {
     const userId = c.get('userId') as string
-    const db = c.get('db') as Database
+    const secretRepo = c.get('secretRepo') as SecretRepository
     const { name, encryptedValue, iv } = await c.req.json()
 
     if (!name || !encryptedValue || !iv) {
       return c.json({ error: 'Missing required fields: name, encryptedValue, iv' }, 400)
     }
 
-    const secret = await db.createSecret(userId, name, encryptedValue, iv)
+    const secret = await secretRepo.createSecret(userId, name, encryptedValue, iv)
 
     return c.json({ secret }, 201)
   } catch (error) {
@@ -37,7 +37,7 @@ export async function createSecret(c: Context) {
 export async function updateSecret(c: Context) {
   try {
     const userId = c.get('userId') as string
-    const db = c.get('db') as Database
+    const secretRepo = c.get('secretRepo') as SecretRepository
     const secretId = parseInt(c.req.param('id'))
     const { name, encryptedValue, iv } = await c.req.json()
 
@@ -45,7 +45,7 @@ export async function updateSecret(c: Context) {
       return c.json({ error: 'Invalid secret ID' }, 400)
     }
 
-    const secret = await db.updateSecret(secretId, userId, name, encryptedValue, iv)
+    const secret = await secretRepo.updateSecret(secretId, userId, name, encryptedValue, iv)
 
     if (!secret) {
       return c.json({ error: 'Secret not found' }, 404)
@@ -61,14 +61,14 @@ export async function updateSecret(c: Context) {
 export async function deleteSecret(c: Context) {
   try {
     const userId = c.get('userId') as string
-    const db = c.get('db') as Database
+    const secretRepo = c.get('secretRepo') as SecretRepository
     const secretId = parseInt(c.req.param('id'))
 
     if (isNaN(secretId)) {
       return c.json({ error: 'Invalid secret ID' }, 400)
     }
 
-    const success = await db.deleteSecret(secretId, userId)
+    const success = await secretRepo.deleteSecret(secretId, userId)
 
     if (!success) {
       return c.json({ error: 'Secret not found' }, 404)

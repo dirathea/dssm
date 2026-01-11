@@ -4,6 +4,8 @@
 
 TapLock is a minimalist secret manager that uses passkeys (WebAuthn) for authentication. No master passwords. Just tap your fingerprint or face to unlock your secrets. Dead simple.
 
+<a href="https://www.buymeacoffee.com/dirathea" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
 ## Features
 
 - 🔑 **Passkey Authentication** - No passwords needed. Use your fingerprint or face ID.

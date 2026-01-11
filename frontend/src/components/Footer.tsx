@@ -9,7 +9,15 @@ export default function Footer() {
       >
         TapLock.dev
       </a>
-      {' · Made with ❤️ in Berlin · 2026'}
+      {' · Made with ❤️ in Berlin · 2026 · '}
+      <a
+        href="https://www.buymeacoffee.com/dirathea"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-gray-700 transition-colors"
+      >
+        ☕ Buy me a coffee
+      </a>
     </footer>
   )
 }

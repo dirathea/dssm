@@ -7,6 +7,7 @@ import Register from './pages/Register'
 import Login from './pages/Login'
 import Recovery from './pages/Recovery'
 import Vault from './pages/Vault'
+import Faq from './pages/Faq'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isRestoringSession } = useAuth()
@@ -47,6 +48,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/recovery" element={<Recovery />} />
+              <Route path="/faq" element={<Faq />} />
               <Route
                 path="/vault"
                 element={

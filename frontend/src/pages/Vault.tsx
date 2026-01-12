@@ -57,7 +57,7 @@ export default function Vault() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-primary/20 to-secondary/20 p-4">
+    <div className="bg-gradient-to-br from-accent/20 via-primary/20 to-secondary/20 p-4 pb-16 md:pb-20">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">

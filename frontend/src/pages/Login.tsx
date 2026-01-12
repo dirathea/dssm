@@ -69,7 +69,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-secondary/20 via-primary/20 to-accent/20">
+    <div className="min-h-[calc(100vh-60px)] md:min-h-[calc(100vh-80px)] flex items-center justify-center p-4 bg-gradient-to-br from-secondary/20 via-primary/20 to-accent/20">
       <Card className="w-full max-w-md bg-white">
         <CardHeader className="space-y-2">
           <CardTitle className="text-4xl font-black text-center">
@@ -132,6 +132,15 @@ export default function Login() {
                   className="font-bold text-foreground underline hover:text-primary"
                 >
                   Create one
+                </Link>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Why passkeys?{' '}
+                <Link
+                  to="/faq"
+                  className="font-bold text-foreground underline hover:text-primary"
+                >
+                  Learn more
                 </Link>
               </p>
             </div>

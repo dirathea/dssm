@@ -140,7 +140,7 @@ export default function Recovery() {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-destructive/20 via-primary/20 to-secondary/20">
+      <div className="min-h-[calc(100vh-60px)] md:min-h-[calc(100vh-80px)] flex items-center justify-center p-4 bg-gradient-to-br from-destructive/20 via-primary/20 to-secondary/20">
         <Card className="w-full max-w-md bg-white">
           <CardHeader className="space-y-2">
             <CardTitle className="text-4xl font-black text-center">
@@ -202,7 +202,7 @@ export default function Recovery() {
                 {loading ? 'Recovering Account...' : 'Recover Account'}
               </Button>
 
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Remember your passkey?{' '}
                   <Link
@@ -210,6 +210,15 @@ export default function Recovery() {
                     className="font-bold text-foreground underline hover:text-primary"
                   >
                     Sign in
+                  </Link>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  More about recovery codes?{' '}
+                  <Link
+                    to="/faq"
+                    className="font-bold text-foreground underline hover:text-primary"
+                  >
+                    Read our FAQ
                   </Link>
                 </p>
               </div>

@@ -4,6 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: taplock
+    develop:
+      watch:
+        - path: frontend
+          action: rebuild
+        - path: worker
+          action: restart
     ports:
       - "8787:8787"
     volumes:

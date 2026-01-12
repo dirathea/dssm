@@ -96,7 +96,7 @@ export default function Register() {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20">
+      <div className="min-h-[calc(100vh-60px)] md:min-h-[calc(100vh-80px)] flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20">
       <Card className="w-full max-w-md bg-white">
         <CardHeader className="space-y-2">
           <CardTitle className="text-4xl font-black text-center">
@@ -145,7 +145,7 @@ export default function Register() {
               {loading ? 'Creating Passkey...' : 'Create Account with Passkey'}
             </Button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link
@@ -153,6 +153,15 @@ export default function Register() {
                   className="font-bold text-foreground underline hover:text-primary"
                 >
                   Sign in
+                </Link>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                How secure are passkeys?{' '}
+                <Link
+                  to="/faq"
+                  className="font-bold text-foreground underline hover:text-primary"
+                >
+                  Read our FAQ
                 </Link>
               </p>
             </div>
